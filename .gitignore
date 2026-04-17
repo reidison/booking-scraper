@@ -1,0 +1,6 @@
+node_modules/
+imagens/
+*.jpg
+*.png
+debug_*.jpg
+.env
