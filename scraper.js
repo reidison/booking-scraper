@@ -5,29 +5,57 @@ const path = require('path');
 
 puppeteer.use(StealthPlugin());
 
-const urls = [
-    { name: 'Pousada do Mondego', id: 'mondego', url: 'https://www.booking.com/hotel/br/pousada-do-mondego.pt-br.html?checkin=2026-04-17&checkout=2026-04-18&group_adults=2&group_children=0' },
-    { name: 'Hotel Recanto Da Serra (Recanto do Ouro)', id: 'recanto', url: 'https://www.booking.com/hotel/br/recanto-do-ouro-ouro-preto.pt-br.html?checkin=2026-04-17&checkout=2026-04-18&group_adults=2&group_children=0' }
-];
+const today = new Date();
+const tomorrow = new Date(today);
+tomorrow.setDate(tomorrow.getDate() + 1);
+
+const formatDate = (date) => {
+    const d = date.getDate().toString().padStart(2, '0');
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const y = date.getFullYear();
+    return `${y}-${m}-${d}`;
+};
+
+const checkinDate = formatDate(today);
+const checkoutDate = formatDate(tomorrow);
+
+const DATA_FILE = path.join(__dirname, 'data.json');
+
+function readData() {
+    if (!fs.existsSync(DATA_FILE)) {
+        return { scrapeInfo: {}, properties: [] };
+    }
+    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+}
 
 async function run() {
-    const imgDir = path.join(__dirname, 'imagens');
-    if (!fs.existsSync(imgDir)){
-        fs.mkdirSync(imgDir);
+    const dataObj = readData();
+    const urls = dataObj.properties || [];
+
+    if (urls.length === 0) {
+        console.log('Nenhum hotel cadastrado em data.json.');
+        return;
     }
 
     console.log('Iniciando o navegador invisível...');
     const browser = await puppeteer.launch({ headless: 'new' });
-    
-    let scrapedData = [];
 
-    for (const item of urls) {
-        console.log(`\nAcessando página: ${item.name}...`);
+    for (let i = 0; i < urls.length; i++) {
+        const item = urls[i];
+        console.log(`\nAcessando página: ${item.property_name}...`);
+        
+        // Build dynamic link
+        const urlToScrape = new URL(item.booking_link);
+        urlToScrape.searchParams.set('checkin', checkinDate);
+        urlToScrape.searchParams.set('checkout', checkoutDate);
+        urlToScrape.searchParams.set('group_adults', '2');
+        urlToScrape.searchParams.set('group_children', '0');
+
         const page = await browser.newPage();
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
         
         try {
-            await page.goto(item.url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await page.goto(urlToScrape.toString(), { waitUntil: 'domcontentloaded', timeout: 60000 });
             await new Promise(r => setTimeout(r, 5000)); // Espera redirecionamentos do Booking
             
             console.log('Extraindo dados da tabela de disponibilidade...');
@@ -47,50 +75,20 @@ async function run() {
                     return roomType ? roomType.innerText.trim() : 'Quarto Padrão (2 Adultos)';
                 };
 
-                const extractImage = () => {
-                    const img = document.querySelector('img.hide_bg_image_on_lazy_load, a.bh-photo-grid-item img, img.bh-photo-grid-item, .gallery-side-reviews-wrapper img, [data-testid="property-main-image"]');
-                    if (img) return img.src || img.dataset.src || img.dataset.lazy;
-                    return null;
-                };
-
                 return {
                     room_types: [{
                         type: extractRoomType(),
                         price: extractPrice()
-                    }],
-                    raw_img_url: extractImage()
+                    }]
                 };
             });
 
-            // Download da imagem físico
-            let localImgPath = '';
-            if (data.raw_img_url && !data.raw_img_url.startsWith('data:image')) {
-                console.log(`Fazendo o download físico da imagem de ${item.name}...`);
-                const viewSource = await page.goto(data.raw_img_url, { waitUntil: 'domcontentloaded' });
-                const buffer = await viewSource.buffer();
-                const fileName = `${item.id}.jpg`;
-                fs.writeFileSync(path.join(imgDir, fileName), buffer);
-                localImgPath = `imagens/${fileName}`;
-                console.log('Imagem salva em: ' + localImgPath);
-            } else {
-                console.log(`Nenhuma imagem válida localizada para ${item.name}`);
-            }
-
-            scrapedData.push({
-                property_name: item.name,
-                booking_link: item.url,
-                main_photo_url: localImgPath,
-                room_types: data.room_types
-            });
+            // Update property in array
+            dataObj.properties[i].room_types = data.room_types;
 
         } catch (error) {
-            console.error(`Erro ao extrair ${item.name}: ${error.message}`);
-            scrapedData.push({
-                property_name: item.name,
-                booking_link: item.url,
-                main_photo_url: '',
-                room_types: [{ type: 'Erro na extração', price: 'R$ --' }]
-            });
+            console.error(`Erro ao extrair ${item.property_name}: ${error.message}`);
+            dataObj.properties[i].room_types = [{ type: 'Erro na extração', price: 'R$ --' }];
         }
 
 
@@ -100,9 +98,14 @@ async function run() {
 
     await browser.close();
 
-    console.log('\nGerando arquivo data.js para o painel...');
-    const jsContent = `const scrapedData = ${JSON.stringify(scrapedData, null, 4)};`;
-    fs.writeFileSync(path.join(__dirname, 'data.js'), jsContent);
+    dataObj.scrapeInfo = {
+        date: new Date().toISOString(),
+        checkin: checkinDate,
+        checkout: checkoutDate
+    };
+    
+    console.log('\nAtualizando arquivo data.json com os novos preços...');
+    fs.writeFileSync(DATA_FILE, JSON.stringify(dataObj, null, 4));
     console.log('Scraping 100% Finalizado!');
 }
 

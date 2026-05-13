@@ -1,26 +1,26 @@
 @echo off
-title Robo Booking - Extraindo Dados
+title Painel Booking - Servidor Local
 color 0A
 echo =======================================================
 echo          SISTEMA AUTOMATICO DE BUSCA BOOKING
 echo =======================================================
 echo.
-echo Iniciando o robo invisivel...
-echo Por favor, aguarde sem fechar esta janela.
-echo O processo pode levar cerca de 30 a 60 segundos.
+echo Iniciando o Servidor Local...
+echo Por favor, NAO FECHE esta janela enquanto estiver usando o painel.
 echo.
 
-:: Executa o scraper usando o node
-node scraper.js
+:: Inicia o servidor Node em segundo plano e aguarda 2 segundos
+start /B node server.js
+timeout /t 2 >nul
 
 echo.
 echo =======================================================
-echo CONCLUIDO! Abrindo o seu painel visual...
+echo ABRINDO PAINEL NO NAVEGADOR...
 echo =======================================================
 echo.
 
 :: Abre o painel HTML automaticamente no navegador padrao
-start index.html
+start http://localhost:3000
 
-:: Aguarda 3 segundos antes de fechar a janela preta
-timeout /t 3 >nul
+:: Mantem a janela aberta
+cmd /k

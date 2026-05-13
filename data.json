@@ -1,0 +1,33 @@
+{
+    "scrapeInfo": {
+        "date": "2026-05-13T13:01:35.693Z",
+        "checkin": "2026-05-13",
+        "checkout": "2026-05-14"
+    },
+    "properties": [
+        {
+            "id": "mondego",
+            "property_name": "Pousada do Mondego",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-do-mondego.pt-br.html",
+            "main_photo_url": "imagens/mondego.jpg",
+            "room_types": [
+                {
+                    "type": "Suíte Júnior",
+                    "price": "R$ 1.578"
+                }
+            ]
+        },
+        {
+            "id": "hotel-recanto-do-ouro-1661",
+            "property_name": "Hotel Recanto do Ouro ",
+            "booking_link": "https://www.booking.com/hotel/br/recanto-da-serra-ouro-preto.pt-br.html?aid=304142&label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4As3akdAGwAIB0gIkMDcxOTU0NDAtYzlmMi00MGI3LTk0MmMtOTVlMmE2ZGJiZDll2AIB4AIB&sid=6521d04f8ae19248757f2197b719ac32&all_sr_blocks=517855001_334258604_2_1_0&checkin=2026-05-13&checkout=2026-05-14&dest_id=5178550&dest_type=hotel&dist=0&group_adults=2&group_children=0&hapos=1&highlighted_blocks=517855001_334258604_2_1_0&hpos=1&matching_block_id=517855001_334258604_2_1_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=517855001_334258604_2_1_0__36900&srepoch=1778676880&srpvid=25d15ac54dc6024d&type=total&ucfs=1&",
+            "main_photo_url": "imagens/hotel-recanto-do-ouro-1661.jpg?t=1778677240582",
+            "room_types": [
+                {
+                    "type": "Quarto Standard com Cama Queen-size",
+                    "price": "R$ 369"
+                }
+            ]
+        }
+    ]
+}

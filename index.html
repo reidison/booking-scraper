@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Scraping - Booking Ouro Preto</title>
+    <title>Painel Interativo - Booking Ouro Preto</title>
     <style>
         body {
             font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -18,6 +18,49 @@
             margin-bottom: 20px;
             font-size: 28px;
         }
+        .header-actions {
+            max-width: 900px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        button {
+            cursor: pointer;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.8; }
+        .btn-primary { background-color: #0284c7; color: white; }
+        .btn-success { background-color: #059669; color: white; }
+        .btn-danger {
+            background-color: transparent;
+            color: #94a3b8;
+            padding: 6px;
+            font-size: 18px;
+            border-radius: 50%;
+        }
+        .btn-danger:hover {
+            color: #dc2626;
+            background-color: #fee2e2;
+        }
+
+        @keyframes flashAndVibrate {
+            0% { background-color: #ffffff; transform: translateX(0); }
+            20% { background-color: #d1fae5; transform: translateX(5px); }
+            40% { transform: translateX(-5px); }
+            60% { transform: translateX(5px); }
+            80% { transform: translateX(-5px); }
+            100% { background-color: #ffffff; transform: translateX(0); }
+        }
+        .updated-flash {
+            animation: flashAndVibrate 1s ease-in-out;
+        }
+
         .info-box {
             max-width: 900px;
             margin: 0 auto 30px auto;
@@ -27,10 +70,12 @@
             border-radius: 4px;
             font-size: 14px;
             color: #0c4a6e;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .info-box p {
-            margin: 5px 0;
-        }
+        .info-box p { margin: 5px 0; }
+        
         #data-container {
             max-width: 900px;
             margin: 0 auto;
@@ -41,36 +86,50 @@
         .property-card {
             background: #ffffff;
             border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            transition: box-shadow 0.3s ease;
+            position: relative;
         }
-        .property-card:hover {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-        @media (min-width: 640px) {
-            .property-card {
-                flex-direction: row;
-            }
-        }
+        @media (min-width: 640px) { .property-card { flex-direction: row; } }
+        
         .property-image-container {
             flex: 0 0 320px;
             background-color: #e5e7eb;
+            position: relative;
+            min-height: 220px;
         }
         .property-image {
             width: 100%;
             height: 100%;
-            min-height: 220px;
             object-fit: cover;
             display: block;
         }
+        .upload-overlay {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .upload-overlay:hover { background: rgba(0,0,0,0.8); }
+        .upload-input { display: none; }
+
         .property-content {
             padding: 24px;
             flex: 1;
             display: flex;
             flex-direction: column;
+        }
+        .property-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
         }
         .property-title {
             font-size: 22px;
@@ -85,10 +144,6 @@
             margin-bottom: 20px;
             display: inline-block;
         }
-        .property-link:hover {
-            text-decoration: underline;
-            color: #1d4ed8;
-        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -99,86 +154,178 @@
             text-align: left;
             border-bottom: 1px solid #e5e7eb;
         }
-        th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            color: #475569;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        td {
-            font-size: 15px;
-            color: #334155;
-        }
-        .price {
-            font-weight: 700;
-            color: #059669;
-            text-align: right;
-        }
-        th.price-header {
-            text-align: right;
-        }
+        th { background-color: #f8fafc; font-weight: 600; color: #475569; font-size: 13px; }
+        td { font-size: 15px; color: #334155; }
+        .price { font-weight: 700; color: #059669; text-align: right; }
+        th.price-header { text-align: right; }
     </style>
 </head>
 <body>
 
-    <h1>Resultados da Busca - Ouro Preto</h1>
+    <h1>Painel de Gerenciamento - Booking</h1>
     
-    <div class="info-box">
-        <p><strong>Configuração:</strong> Check-in: Hoje | Check-out: Amanhã | Ocupação: 2 Adultos, 0 Crianças.</p>
-        <p><strong>Dados:</strong> Extraídos em tempo real via agente de navegação do sistema.</p>
+    <div class="header-actions">
+        <button class="btn-success" onclick="triggerScraper(true)">🔄 Executar Robô Agora</button>
+        <button class="btn-primary" onclick="addHotel()">➕ Adicionar Hotel</button>
     </div>
 
-    <div id="data-container"></div>
+    <div class="info-box">
+        <div>
+            <p><strong>Check-in:</strong> <span id="chk-in">--</span> | <strong>Check-out:</strong> <span id="chk-out">--</span></p>
+            <p><strong>Última atualização do robô:</strong> <span id="last-update">--</span></p>
+        </div>
+    </div>
 
-    <script src="data.js"></script>
+    <div id="data-container">Carregando dados...</div>
+
     <script>
-        const container = document.getElementById('data-container');
-        
-        // scrapedData is loaded from data.js
-        if (typeof scrapedData !== 'undefined') {
-            scrapedData.forEach(property => {
+        let lastPropertiesData = null;
+        let isFirstLoad = true;
+
+        const audioAlert = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+
+        async function loadData() {
+            try {
+                const res = await fetch('/api/data');
+                const data = await res.json();
+                
+                if (!isFirstLoad && lastPropertiesData) {
+                    let hasPriceChanges = false;
+                    for (const newProp of data.properties) {
+                        const oldProp = lastPropertiesData.find(p => p.id === newProp.id);
+                        if (oldProp) {
+                            if (JSON.stringify(oldProp.room_types) !== JSON.stringify(newProp.room_types)) {
+                                hasPriceChanges = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (hasPriceChanges) {
+                        audioAlert.play().catch(e => console.log('Audio autoplay blocked', e));
+                        document.body.classList.add('updated-flash');
+                        setTimeout(() => document.body.classList.remove('updated-flash'), 1000);
+                    }
+                }
+                
+                if (data.properties) {
+                    lastPropertiesData = JSON.parse(JSON.stringify(data.properties));
+                }
+                isFirstLoad = false;
+                
+                renderUI(data);
+            } catch (err) {
+                document.getElementById('data-container').innerHTML = '<p style="color:red; text-align:center;">Erro ao conectar com o servidor local.</p>';
+            }
+        }
+
+        function renderUI(data) {
+            if (data.scrapeInfo && data.scrapeInfo.date) {
+                document.getElementById('chk-in').textContent = data.scrapeInfo.checkin.split('-').reverse().join('/');
+                document.getElementById('chk-out').textContent = data.scrapeInfo.checkout.split('-').reverse().join('/');
+                document.getElementById('last-update').textContent = new Date(data.scrapeInfo.date).toLocaleString('pt-BR');
+            }
+
+            const container = document.getElementById('data-container');
+            container.innerHTML = '';
+
+            if (!data.properties || data.properties.length === 0) {
+                container.innerHTML = '<p style="text-align:center;">Nenhum hotel cadastrado. Adicione um novo hotel.</p>';
+                return;
+            }
+
+            data.properties.forEach(property => {
                 const card = document.createElement('div');
                 card.className = 'property-card';
                 
                 let roomsRows = '';
-                property.room_types.forEach(room => {
-                    roomsRows += `
-                        <tr>
-                            <td>${room.type}</td>
-                            <td class="price">${room.price}</td>
-                        </tr>
-                    `;
-                });
+                if (property.room_types) {
+                    property.room_types.forEach(room => {
+                        roomsRows += `<tr><td>${room.type}</td><td class="price">${room.price}</td></tr>`;
+                    });
+                }
 
                 card.innerHTML = `
                     <div class="property-image-container">
-                        <img src="${property.main_photo_url}" alt="Foto Principal - ${property.property_name}" class="property-image" onerror="this.src='https://via.placeholder.com/400x300?text=Sem+Imagem';">
+                        <img src="${property.main_photo_url || 'https://via.placeholder.com/400x300?text=Sem+Imagem'}" alt="Foto Principal" class="property-image" onerror="this.src='https://via.placeholder.com/400x300?text=Sem+Imagem';">
+                        <label class="upload-overlay">
+                            📷 Alterar Imagem
+                            <input type="file" class="upload-input" accept="image/*" onchange="uploadImage(event, '${property.id}')">
+                        </label>
                     </div>
                     <div class="property-content">
-                        <h2 class="property-title">${property.property_name}</h2>
-                        <a href="${property.booking_link}" target="_blank" class="property-link">🔗 Acessar página na Booking.com</a>
+                        <div class="property-header">
+                            <div>
+                                <h2 class="property-title">${property.property_name}</h2>
+                                <a href="${property.booking_link}" target="_blank" class="property-link">🔗 Página na Booking</a>
+                            </div>
+                            <button class="btn-danger" title="Excluir Hotel" onclick="deleteHotel('${property.id}')">🗑️</button>
+                        </div>
                         
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Tipo/Descrição do Quarto</th>
-                                    <th class="price-header">Preço (2 Adultos)</th>
+                                    <th>Tipo de Quarto</th>
+                                    <th class="price-header">Preço</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                ${roomsRows}
-                            </tbody>
+                            <tbody>${roomsRows}</tbody>
                         </table>
                     </div>
                 `;
-                
                 container.appendChild(card);
             });
-        } else {
-            container.innerHTML = '<p style="text-align:center; padding: 20px;">Nenhum dado encontrado. Por favor, execute o robô de scraping primeiro!</p>';
         }
+
+        async function addHotel() {
+            const name = prompt("Nome do Hotel:");
+            if (!name) return;
+            const link = prompt("Link da Booking.com:");
+            if (!link) return;
+
+            await fetch('/api/properties', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ property_name: name, booking_link: link })
+            });
+            loadData();
+        }
+
+        async function deleteHotel(id) {
+            if (!confirm("Tem certeza que deseja excluir este hotel?")) return;
+            await fetch(`/api/properties/${id}`, { method: 'DELETE' });
+            loadData();
+        }
+
+        async function uploadImage(event, id) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            event.target.parentElement.innerHTML = 'Enviando...';
+
+            await fetch(`/api/upload/${id}`, {
+                method: 'POST',
+                body: formData
+            });
+            loadData();
+        }
+
+        async function triggerScraper(isManual = false) {
+            if (isManual) alert('O robô foi iniciado em segundo plano. Ele atualizará os preços em breve.');
+            await fetch('/api/scrape', { method: 'POST' });
+        }
+
+        // Load initially
+        loadData();
+        
+        // Auto-refresh data on UI every 30 seconds
+        setInterval(loadData, 30000);
+
+        // Auto-trigger scraper every 20 minutes
+        setInterval(() => triggerScraper(false), 20 * 60 * 1000);
     </script>
 </body>
 </html>
