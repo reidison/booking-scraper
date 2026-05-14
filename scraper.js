@@ -83,6 +83,57 @@ async function run() {
                 };
             });
 
+            // Extrair o valor numérico para histórico
+            const priceStr = data.room_types[0].price;
+            let numericPrice = 0;
+            if (!priceStr.includes('--') && !priceStr.includes('indisponível') && !priceStr.includes('Erro')) {
+                const cleanStr = priceStr.replace(/R\$\s?/g, '').replace(/\./g, '').replace(/,/g, '.').trim();
+                numericPrice = parseFloat(cleanStr);
+            }
+
+            if (!dataObj.properties[i].price_history) dataObj.properties[i].price_history = [];
+            if (!dataObj.alerts) dataObj.alerts = [];
+
+            const history = dataObj.properties[i].price_history;
+            const todayStr = formatDate(today);
+            
+            // Lógica de Alertas
+            const lastRecord = history.length > 0 ? history[history.length - 1] : null;
+            if (lastRecord && numericPrice > 0 && lastRecord.price > 0 && numericPrice !== lastRecord.price && lastRecord.date !== todayStr) {
+                const diff = numericPrice - lastRecord.price;
+                const percent = Math.abs((diff / lastRecord.price) * 100).toFixed(1);
+                const type = diff < 0 ? 'success' : 'warning';
+                const msg = diff < 0 
+                    ? `${item.property_name} reduziu o preço em ${percent}% (de R$ ${lastRecord.price} para R$ ${numericPrice})`
+                    : `${item.property_name} aumentou o preço em ${percent}% (de R$ ${lastRecord.price} para R$ ${numericPrice})`;
+                
+                dataObj.alerts.unshift({
+                    id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
+                    date: new Date().toISOString(),
+                    message: msg,
+                    type: type,
+                    hotelId: item.id
+                });
+            }
+
+            // Manter no máximo 50 alertas
+            if (dataObj.alerts.length > 50) dataObj.alerts = dataObj.alerts.slice(0, 50);
+
+            // Atualizar histórico do dia
+            if (numericPrice > 0) {
+                const existingDayIndex = history.findIndex(h => h.date === todayStr);
+                if (existingDayIndex >= 0) {
+                    history[existingDayIndex].price = numericPrice;
+                } else {
+                    history.push({ date: todayStr, price: numericPrice });
+                }
+            }
+
+            // Manter apenas 14 dias de histórico
+            if (history.length > 14) {
+                dataObj.properties[i].price_history = history.slice(history.length - 14);
+            }
+
             // Update property in array
             dataObj.properties[i].room_types = data.room_types;
 

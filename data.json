@@ -1,22 +1,10 @@
 {
     "scrapeInfo": {
-        "date": "2026-05-13T13:01:35.693Z",
-        "checkin": "2026-05-13",
-        "checkout": "2026-05-14"
+        "date": "2026-05-14T19:53:32.004Z",
+        "checkin": "2026-05-14",
+        "checkout": "2026-05-15"
     },
     "properties": [
-        {
-            "id": "mondego",
-            "property_name": "Pousada do Mondego",
-            "booking_link": "https://www.booking.com/hotel/br/pousada-do-mondego.pt-br.html",
-            "main_photo_url": "imagens/mondego.jpg",
-            "room_types": [
-                {
-                    "type": "Suíte Júnior",
-                    "price": "R$ 1.578"
-                }
-            ]
-        },
         {
             "id": "hotel-recanto-do-ouro-1661",
             "property_name": "Hotel Recanto do Ouro ",
@@ -24,10 +12,233 @@
             "main_photo_url": "imagens/hotel-recanto-do-ouro-1661.jpg?t=1778677240582",
             "room_types": [
                 {
-                    "type": "Quarto Standard com Cama Queen-size",
-                    "price": "R$ 369"
+                    "type": "Quarto Deluxe com Cama Queen-size",
+                    "price": "R$ 389"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-14",
+                    "price": 389
+                }
+            ]
+        },
+        {
+            "id": "hotel-solar-das-lajes-4403",
+            "property_name": "Hotel Solar Das Lajes",
+            "booking_link": "https://www.booking.com/hotel/br/solar-das-lajes.pt-br.html?aid=304142&label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4As3akdAGwAIB0gIkMDcxOTU0NDAtYzlmMi00MGI3LTk0MmMtOTVlMmE2ZGJiZDll2AIB4AIB&sid=6521d04f8ae19248757f2197b719ac32&all_sr_blocks=30643904_86319147_3_1_0&checkin=2026-05-13&checkout=2026-05-14&dest_id=306439&dest_type=hotel&dist=0&group_adults=2&group_children=0&hapos=1&highlighted_blocks=30643904_86319147_3_1_0&hpos=1&matching_block_id=30643904_86319147_3_1_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=30643904_86319147_3_1_0__48000&srepoch=1778678501&srpvid=ad0b5def129508b7&type=total&ucfs=1&",
+            "main_photo_url": "imagens/hotel-solar-das-lajes-4403.jpg?t=1778678891576",
+            "room_types": [
+                {
+                    "type": "Quarto Duplo Standard",
+                    "price": "R$ 380"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-14",
+                    "price": 380
+                }
+            ]
+        },
+        {
+            "id": "pousada-casa-dos-contos-5885",
+            "property_name": "Pousada Casa Dos Contos",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-casa-dos-contos.pt-br.html?aid=304142&label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4ApiZk9AGwAIB0gIkNTE0NTc0ZTktNmMzZS00MWY3LWE1MTgtZWIzYTM5MWRjNDgz2AIB4AIB&sid=6521d04f8ae19248757f2197b719ac32&all_sr_blocks=30645209_91920260_2_0_0&checkin=2026-05-13&checkout=2026-05-14&dest_id=-658339&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=1&highlighted_blocks=30645209_91920260_2_0_0&hpos=1&matching_block_id=30645209_91920260_2_0_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=30645209_91920260_2_0_0__40000&srepoch=1778699788&srpvid=893b8784750b0533&type=total&ucfs=1&",
+            "main_photo_url": "imagens/pousada-casa-dos-contos-5885.jpg?t=1778699862254",
+            "room_types": [
+                {
+                    "type": "Quarto Padrão (2 Adultos)",
+                    "price": "R$ 408"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-14",
+                    "price": 408
+                }
+            ]
+        },
+        {
+            "id": "hotel-pousada-minas-gerais-3568",
+            "property_name": "Hotel Pousada Minas Gerais",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-minas-gerais.pt-br.html?label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4ApiZk9AGwAIB0gIkNTE0NTc0ZTktNmMzZS00MWY3LWE1MTgtZWIzYTM5MWRjNDgz2AIB4AIB&aid=304142&ucfs=1&arphpl=1&checkin=2026-05-13&checkout=2026-05-14&dest_id=302115&dest_type=hotel&group_adults=2&req_adults=2&no_rooms=1&group_children=0&req_children=0&ucfac=3151",
+            "main_photo_url": "imagens/hotel-pousada-minas-gerais-3568.jpg?t=1778700151304",
+            "room_types": [
+                {
+                    "type": "Quarto Triplo Standard",
+                    "price": "R$ 523"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-14",
+                    "price": 523
+                }
+            ]
+        },
+        {
+            "id": "pousada-nossa-senhora-das-merc-s-2246",
+            "property_name": "Pousada Nossa Senhora Das Mercês",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-solar-nossa-senhora-das-merces.pt-br.html?aid=304142&label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4AsC-k9AGwAIB0gIkOWFiNzU1NDctNmIxOC00NmE5LTgxYjAtZTI1OWMwN2IyMzYx2AIB4AIB&sid=6521d04f8ae19248757f2197b719ac32&checkin=2026-05-13&checkout=2026-05-14&dest_id=625920&dest_type=hotel&dist=0&group_adults=2&group_children=0&hapos=1&hpos=1&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&soh=1&sr_order=popularity&srepoch=1778704370&srpvid=4bae9077b2c5005e&type=total&ucfs=1&#no_availability_msg",
+            "main_photo_url": "imagens/pousada-nossa-senhora-das-merc-s-2246.jpg?t=1778704522144",
+            "room_types": [
+                {
+                    "type": "Quarto Duplo Standard",
+                    "price": "R$ 320"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-14",
+                    "price": 320
+                }
+            ]
+        },
+        {
+            "id": "hotel-solar-de-maria-7014",
+            "property_name": "Hotel Solar De Maria",
+            "booking_link": "https://www.booking.com/hotel/br/solar-de-maria.pt-br.html?aid=304142&label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4AsC-k9AGwAIB0gIkOWFiNzU1NDctNmIxOC00NmE5LTgxYjAtZTI1OWMwN2IyMzYx2AIB4AIB&sid=6521d04f8ae19248757f2197b719ac32&all_sr_blocks=30715403_91920317_0_1_0&checkin=2026-05-13&checkout=2026-05-14&dest_id=375964&dest_type=hotel&dist=0&group_adults=2&group_children=0&hapos=10&highlighted_blocks=30715403_91920317_0_1_0&hpos=10&matching_block_id=30715403_91920317_0_1_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=30715403_91920317_0_1_0__43920&srepoch=1778704766&srpvid=a6ea913572a40a49&type=total&ucfs=1&",
+            "main_photo_url": "imagens/hotel-solar-de-maria-7014.jpg?t=1778704930084",
+            "room_types": [
+                {
+                    "type": "Quarto Duplo Superior com Banheira",
+                    "price": "R$ 571"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-14",
+                    "price": 571
+                }
+            ]
+        },
+        {
+            "id": "pousada-solar-das-gerais-9824",
+            "property_name": "Pousada Solar Das Gerais",
+            "booking_link": "https://www.booking.com/hotel/br/pertin-da-praca-hostel.pt-br.html?aid=304142&label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4ApiZk9AGwAIB0gIkNTE0NTc0ZTktNmMzZS00MWY3LWE1MTgtZWIzYTM5MWRjNDgz2AIB4AIB&sid=6521d04f8ae19248757f2197b719ac32&all_sr_blocks=1137120223_411181983_2_1_0&checkin=2026-05-13&checkout=2026-05-14&dest_id=11371202&dest_type=hotel&dist=0&group_adults=2&group_children=0&hapos=1&highlighted_blocks=1137120223_411181983_2_1_0&hpos=1&matching_block_id=1137120223_411181983_2_1_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=1137120223_411181983_2_1_0__19500&srepoch=1778707573&srpvid=ce9896b85b1c0003&type=total&ucfs=1&",
+            "main_photo_url": "imagens/pousada-solar-das-gerais-9824.jpg?t=1778707651675",
+            "room_types": [
+                {
+                    "type": "Quarto Deluxe",
+                    "price": "R$ 218"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-14",
+                    "price": 218
+                }
+            ]
+        },
+        {
+            "id": "pousada-arcadia-mineira-2302",
+            "property_name": "Pousada Arcadia Mineira",
+            "booking_link": "https://www.booking.com/hotel/br/arcadia-mineira.pt-br.html?aid=304142&label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4AsC-k9AGwAIB0gIkOWFiNzU1NDctNmIxOC00NmE5LTgxYjAtZTI1OWMwN2IyMzYx2AIB4AIB&sid=6521d04f8ae19248757f2197b719ac32&all_sr_blocks=63532402_88845009_0_1_0&checkin=2026-05-13&checkout=2026-05-14&dest_id=-658339&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=3&highlighted_blocks=63532402_88845009_0_1_0&hpos=3&matching_block_id=63532402_88845009_0_1_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=63532402_88845009_0_1_0__39000&srepoch=1778707734&srpvid=8aeb97076a201001&type=total&ucfs=1&",
+            "main_photo_url": "imagens/pousada-arcadia-mineira-2302.jpg?t=1778708410752",
+            "room_types": [
+                {
+                    "type": "Quarto Triplo Standard com Ventilador",
+                    "price": "R$ 390"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-14",
+                    "price": 390
+                }
+            ]
+        },
+        {
+            "id": "pousada-solar-da-inconfid-ncia-0250",
+            "property_name": "Pousada Solar Da Inconfidência",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-toledo.pt-br.html?aid=304142",
+            "main_photo_url": "imagens/pousada-solar-da-inconfid-ncia-0250.jpg?t=1778712803411",
+            "room_types": [
+                {
+                    "type": "Quarto Superior com 2 Camas de Solteiro",
+                    "price": "R$ 469"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-14",
+                    "price": 469
+                }
+            ]
+        },
+        {
+            "id": "pousada-sinh-ol-mpia-9092",
+            "property_name": "Pousada Sinhá Olímpia",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-sinha-olimpia-ouro-preto.pt-br.html?aid=304142",
+            "main_photo_url": "imagens/pousada-sinh-ol-mpia-9092.jpg?t=1778712879089",
+            "room_types": [
+                {
+                    "type": "Quarto com Cama Queen-size",
+                    "price": "R$ 383"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-14",
+                    "price": 383
+                }
+            ]
+        },
+        {
+            "id": "pousada-do-mondego-6310",
+            "property_name": "Pousada Do Mondego",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-do-mondego.pt-br.html?aid=304142",
+            "main_photo_url": "imagens/pousada-do-mondego-6310.jpg?t=1778713071776",
+            "room_types": [
+                {
+                    "type": "Suíte Júnior",
+                    "price": "R$ 1.578"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-14",
+                    "price": 1578
+                }
+            ]
+        },
+        {
+            "id": "casa-dos-meninos-b-b-1680",
+            "property_name": "Casa dos Meninos B&B",
+            "booking_link": "https://www.booking.com/hotel/br/casa-dos-meninos-b-amp-b.pt-br.html?aid=304142",
+            "main_photo_url": "imagens/casa-dos-meninos-b-b-1680.jpg?t=1778785541267",
+            "room_types": [
+                {
+                    "type": "Suíte Superior",
+                    "price": "R$ 640"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-14",
+                    "price": 640
+                }
+            ]
+        },
+        {
+            "id": "pousada-do-ouvidor-4130",
+            "property_name": "Pousada Do Ouvidor",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-do-ouvidor.pt-br.html?aid=304142",
+            "main_photo_url": "imagens/pousada-do-ouvidor-4130.jpg?t=1778787426831",
+            "room_types": [
+                {
+                    "type": "Quarto Duplo Econômico Sem Vista",
+                    "price": "R$ 298"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-14",
+                    "price": 298
                 }
             ]
         }
-    ]
+    ],
+    "alerts": []
 }
