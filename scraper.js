@@ -266,89 +266,113 @@ async function run() {
                      !document.querySelector('[data-testid="availability-table"]') &&
                      !document.querySelector('table[data-block="availability_table"]'));
 
-                const extractPrice = () => {
-                    if (isSoldOut) return 'Preço indisponível';
+                // Extrai todos os tipos de quarto com seus preços da tabela de disponibilidade
+                const extractAllRooms = () => {
+                    if (isSoldOut) return [];
 
-                    // Busca apenas dentro da tabela de disponibilidade real
-                    const tableSelectors = [
-                        '.hprt-table .bui-price-display__value',
-                        '.hprt-table .prc-box-format__value',
-                        '[data-testid="availability-table"] [data-testid="price-and-discounted-price"]',
-                        '.hprt-table .prco-valign-middle-helper',
-                        'table.hprt-table span.prco-inline-block-maker-helper',
-                        'table[data-block="availability_table"] [data-testid="price-and-discounted-price"]',
-                        '.hprt-table [data-testid="price-and-discounted-price"]',
-                    ];
-                    for (const sel of tableSelectors) {
-                        const els = document.querySelectorAll(sel);
-                        for (const el of els) {
-                            const txt = el.innerText.trim();
-                            if (txt.includes('R$')) return txt;
-                        }
-                    }
+                    const table = document.querySelector('.hprt-table') ||
+                                  document.querySelector('[data-testid="availability-table"]') ||
+                                  document.querySelector('table[data-block="availability_table"]');
+                    if (!table) return [];
 
-                    // Fallback: apenas dentro de containers de preço conhecidos
-                    const fallbackSelectors = [
+                    const roomPrices = new Map(); // nome do quarto -> menor preço
+                    let currentRoomName = null;
+
+                    const priceSelectors = [
                         '.bui-price-display__value',
                         '.prc-box-format__value',
+                        '[data-testid="price-and-discounted-price"]',
+                        '.prco-valign-middle-helper',
+                        'span.prco-inline-block-maker-helper',
                     ];
-                    for (const sel of fallbackSelectors) {
-                        const els = document.querySelectorAll(sel);
-                        for (const el of els) {
-                            const txt = el.innerText.trim();
-                            if (txt.includes('R$')) return txt;
+
+                    const rows = table.querySelectorAll('tr');
+                    for (const row of rows) {
+                        // Detecta nome do quarto nesta linha (pode ter rowspan)
+                        const roomNameEl = row.querySelector(
+                            '.hprt-roomtype-link, [data-testid="room-type-name"], ' +
+                            '[data-testid="roomtype-name"], .hprt-roomtype-icon-link, .room-name'
+                        );
+                        if (roomNameEl) {
+                            const txt = roomNameEl.innerText.trim();
+                            if (txt) currentRoomName = txt;
+                        }
+
+                        if (!currentRoomName) continue;
+
+                        // Extrai preço desta linha ignorando tachados (<del>/<s>)
+                        let foundPrice = false;
+                        for (const sel of priceSelectors) {
+                            if (foundPrice) break;
+                            const els = row.querySelectorAll(sel);
+                            for (const el of els) {
+                                // Verifica se o elemento está dentro de um elemento tachado
+                                let parent = el.parentElement;
+                                let inStrikethrough = false;
+                                while (parent && parent !== row) {
+                                    if (parent.tagName === 'DEL' || parent.tagName === 'S') {
+                                        inStrikethrough = true;
+                                        break;
+                                    }
+                                    parent = parent.parentElement;
+                                }
+                                if (inStrikethrough) continue;
+
+                                const txt = el.innerText.trim();
+                                if (!txt.includes('R$')) continue;
+
+                                const cleanStr = txt.replace(/R\$\s?/g, '').replace(/\./g, '').replace(/,/g, '.').trim();
+                                const match = cleanStr.match(/\d+(?:\.\d+)?/);
+                                if (!match) continue;
+
+                                const price = parseFloat(match[0]);
+                                if (isNaN(price) || price < 20) continue;
+
+                                // Mantém o menor preço por tipo de quarto
+                                if (!roomPrices.has(currentRoomName) || price < roomPrices.get(currentRoomName)) {
+                                    roomPrices.set(currentRoomName, price);
+                                }
+                                foundPrice = true;
+                                break;
+                            }
                         }
                     }
 
-                    return 'Preço indisponível';
+                    // Retorna ordenado do menor para o maior preço
+                    return Array.from(roomPrices.entries())
+                        .map(([name, price]) => ({ name, price }))
+                        .sort((a, b) => a.price - b.price);
                 };
 
-                const extractRoomType = () => {
-                    if (isSoldOut) return 'Indisponível (Esgotado)';
-                    const selectors = [
-                        '.hprt-roomtype-link',
-                        '.room-name',
-                        '.hprt-roomtype-icon-link',
-                        '[data-testid="room-type-name"]',
-                        '[data-testid="roomtype-name"]',
-                    ];
-                    for (const sel of selectors) {
-                        const el = document.querySelector(sel);
-                        if (el && el.innerText.trim()) return el.innerText.trim();
-                    }
-                    return 'Quarto Padrão (2 Adultos)';
-                };
-
-                return { roomType: extractRoomType(), price: extractPrice(), isSoldOut };
+                return { rooms: extractAllRooms(), isSoldOut };
             });
 
-            // Parse preço numérico
-            let numericPrice = 0;
-            if (!data.price.includes('indisponível') && !data.price.includes('--')) {
-                const cleanStr = data.price.replace(/R\$\s?/g, '').replace(/\./g, '').replace(/,/g, '.').trim();
-                numericPrice = parseFloat(cleanStr);
-                if (isNaN(numericPrice)) numericPrice = 0;
+            const { rooms, isSoldOut } = data;
+
+            if (isSoldOut || rooms.length === 0) {
+                console.log(`   🚫 Indisponível ou sem quartos na tabela de disponibilidade`);
+                allUpdates.push({
+                    property_id: prop.id,
+                    property_name: prop.name,
+                    room_name: 'Indisponível (Esgotado)',
+                    price: 0,
+                    source_url: prop.source_url.trim(),
+                    status: 'sold_out',
+                });
+            } else {
+                console.log(`   📋 ${rooms.length} tipo(s) de quarto encontrado(s):`);
+                for (const room of rooms) {
+                    console.log(`      💵 ${room.name}: R$ ${room.price.toFixed(2)}`);
+                    allUpdates.push({
+                        property_id: prop.id,
+                        property_name: prop.name,
+                        room_name: room.name,
+                        price: room.price,
+                        source_url: prop.source_url.trim(),
+                        status: 'available',
+                    });
+                }
             }
-
-            console.log(`   📋 Quarto: ${data.roomType}`);
-            console.log(`   💵 Preço: ${data.price} (R$ ${numericPrice})`);
-
-            // Preço suspeito: valor positivo mas abaixo de R$ 20 indica erro de parsing
-            if (numericPrice > 0 && numericPrice < 20) {
-                console.log(`   ⚠️  Preço suspeito (R$ ${numericPrice}) — ignorando atualização para evitar dado errado.`);
-                await page.close();
-                continue;
-            }
-
-            // Adicionar à lista de atualizações (property_id garante match exato na Edge Function)
-            allUpdates.push({
-                property_id: prop.id,
-                property_name: prop.name,
-                room_name: data.roomType,
-                price: numericPrice,
-                source_url: prop.source_url.trim(),
-                status: data.isSoldOut ? 'sold_out' : 'available',
-            });
 
         } catch (error) {
             console.error(`   ❌ Erro ao processar ${prop.name}: ${error.message}`);
@@ -371,7 +395,7 @@ async function run() {
 
     console.log('\n══════════════════════════════════════════════════════════');
     console.log(`   ✅ Scraping finalizado!`);
-    console.log(`   📊 ${allUpdates.length} propriedades processadas`);
+    console.log(`   📊 ${properties.length} propriedades processadas, ${allUpdates.length} entradas de quarto enviadas`);
     console.log(`   ⏰ ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
     console.log('══════════════════════════════════════════════════════════\n');
 }
