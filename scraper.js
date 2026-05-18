@@ -247,18 +247,29 @@ async function run() {
             const data = await page.evaluate(() => {
                 const bodyText = document.body.innerText;
 
+                // Detecta indisponibilidade — cobre pt-BR, pt-PT e inglês
                 const isSoldOut =
-                    bodyText.includes('Datas alternativas') ||
+                    bodyText.includes('Esta acomodação não tem disponibilidade') ||
+                    bodyText.includes('Este alojamento não tem disponibilidade') ||
                     bodyText.includes('Não temos disponibilidade para estas datas') ||
                     bodyText.includes('Não há disponibilidade para as datas') ||
-                    bodyText.includes('Este alojamento não tem disponibilidade') ||
+                    bodyText.includes('Não há disponibilidade para os dias') ||
+                    bodyText.includes('Sem disponibilidade para as datas') ||
+                    bodyText.includes('Datas alternativas') ||
                     bodyText.includes('No availability for your dates') ||
                     bodyText.includes('unavailable for your dates') ||
-                    bodyText.includes('Alternative dates');
+                    bodyText.includes('Alternative dates') ||
+                    bodyText.includes('sold out') ||
+                    bodyText.includes('Sold out') ||
+                    // Se a tabela de disponibilidade não existe no DOM, não há preço real
+                    (!document.querySelector('.hprt-table') &&
+                     !document.querySelector('[data-testid="availability-table"]') &&
+                     !document.querySelector('table[data-block="availability_table"]'));
 
                 const extractPrice = () => {
                     if (isSoldOut) return 'Preço indisponível';
 
+                    // Busca apenas dentro da tabela de disponibilidade real
                     const tableSelectors = [
                         '.hprt-table .bui-price-display__value',
                         '.hprt-table .prc-box-format__value',
@@ -276,11 +287,10 @@ async function run() {
                         }
                     }
 
+                    // Fallback: apenas dentro de containers de preço conhecidos
                     const fallbackSelectors = [
                         '.bui-price-display__value',
                         '.prc-box-format__value',
-                        '[data-testid="price-and-discounted-price"]',
-                        '[data-testid="recommended-units"] [data-testid="price-and-discounted-price"]',
                     ];
                     for (const sel of fallbackSelectors) {
                         const els = document.querySelectorAll(sel);
@@ -290,9 +300,7 @@ async function run() {
                         }
                     }
 
-                    // Regex captura R$ com decimais (ex: R$ 1.200,00)
-                    const match = bodyText.match(/R\$\s?[\d.,]+/);
-                    return match ? match[0] : 'Preço indisponível';
+                    return 'Preço indisponível';
                 };
 
                 const extractRoomType = () => {
