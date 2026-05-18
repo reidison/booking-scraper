@@ -23,4 +23,4 @@ echo.
 start http://localhost:3000
 
 :: Mantem a janela aberta
-cmd /k
+cmd 

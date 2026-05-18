@@ -152,7 +152,7 @@
                         <div>
                             <p class="text-sm font-medium text-slate-500 mb-1">Status do Robô</p>
                             <h3 class="text-lg font-bold text-emerald-600 mt-1">Operacional</h3>
-                            <p class="text-xs text-slate-500 font-medium mt-2">Atualiza a cada 10 min</p>
+                            <p class="text-xs text-slate-500 font-medium mt-2">Atualiza a cada 15 min</p>
                         </div>
                     </div>
                 </div>
@@ -163,7 +163,7 @@
                         <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
                             <h3 class="text-lg font-bold text-slate-800">Preços - Hoje</h3>
                         </div>
-                        <div class="overflow-y-auto max-h-[400px]">
+                        <div class="overflow-y-auto overflow-x-hidden max-h-[400px]">
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
@@ -179,8 +179,8 @@
 
                     <!-- Gráfico (Chart.js) -->
                     <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col lg:col-span-2 min-h-[400px]">
-                        <h3 class="text-lg font-bold text-slate-800 mb-1">Evolução de preços (últimos 14 dias)</h3>
-                        <p class="text-sm text-slate-500 mb-6">Acompanhamento de preços para os hotéis monitorados.</p>
+                        <h3 class="text-lg font-bold text-slate-800 mb-1">Ranking de Preços e Flutuações (Buy Box)</h3>
+                        <p class="text-sm text-slate-500 mb-6">Classificação dos hotéis mais baratos e registro de frequência de mudanças de preço.</p>
                         <div class="flex-1 w-full relative">
                             <canvas id="priceChart"></canvas>
                         </div>
@@ -278,70 +278,60 @@
         function renderChart(properties) {
             const ctx = document.getElementById('priceChart').getContext('2d');
             
-            // Collect all unique dates from all histories
-            const allDatesSet = new Set();
-            properties.forEach(p => {
-                if (p.price_history) {
-                    p.price_history.forEach(h => allDatesSet.add(h.date));
+            // Calcula métricas para cada propriedade
+            const chartData = properties.map(p => {
+                let currentPrice = 0;
+                if (p.room_types && p.room_types.length > 0) {
+                    currentPrice = parsePrice(p.room_types[0].price);
                 }
-            });
-            const allDates = Array.from(allDatesSet).sort();
-
-            const datasets = properties.filter(p => p.price_history && p.price_history.length > 0).map((p, index) => {
-                // Map prices to dates
-                const dataPoints = allDates.map(date => {
-                    const record = p.price_history.find(h => h.date === date);
-                    return record ? record.price : null;
-                });
+                
+                let changesCount = 0;
+                if (p.price_history && p.price_history.length > 1) {
+                    for (let i = 1; i < p.price_history.length; i++) {
+                        if (p.price_history[i].price !== p.price_history[i-1].price) {
+                            changesCount++;
+                        }
+                    }
+                }
 
                 return {
-                    label: p.property_name,
-                    data: dataPoints,
-                    borderColor: chartColors[index % chartColors.length],
-                    backgroundColor: chartColors[index % chartColors.length] + '20', // transparent
-                    tension: 0.3,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    borderWidth: 2,
-                    spanGaps: true // Conecta os pontos mesmo se faltar dado em um dia
+                    id: p.id,
+                    name: p.property_name,
+                    price: currentPrice,
+                    changes: changesCount
                 };
-            });
+            }).filter(p => p.price > 0); // Ignorar propriedades sem preço válido
+
+            // Ordenar por preço crescente (Mais barato = Rank 1 da Buy Box)
+            chartData.sort((a, b) => a.price - b.price);
+
+            // Cria os Títulos (Eixo Y) eliminando a necessidade de cores e legenda confusa
+            const labels = chartData.map((p, index) => `#${index + 1} ${p.name}`);
+            const data = chartData.map(p => p.price);
+            
+            // Cores: Top 3 (Buy Box) em Verde, restantes em Cinza Azulado
+            const bgColors = chartData.map((p, index) => index < 3 ? 'rgba(16, 185, 129, 0.8)' : 'rgba(148, 163, 184, 0.6)');
+            const borderColors = chartData.map((p, index) => index < 3 ? 'rgb(16, 185, 129)' : 'rgb(148, 163, 184)');
 
             const config = {
-                type: 'line',
+                type: 'bar',
                 data: {
-                    labels: allDates.map(d => d.split('-').reverse().slice(0,2).join('/')), // Formato DD/MM
-                    datasets: datasets
+                    labels: labels,
+                    datasets: [{
+                        label: 'Preço Atual',
+                        data: data,
+                        backgroundColor: bgColors,
+                        borderColor: borderColors,
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
                 },
                 options: {
+                    indexAxis: 'y', // Transforma em Gráfico de Barras Horizontais
                     responsive: true,
                     maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'nearest',
-                        intersect: true
-                    },
                     plugins: {
-                        legend: { 
-                            position: 'bottom', 
-                            labels: { usePointStyle: true, padding: 15, font: { size: 12 } },
-                            onHover: function(e, legendItem, legend) {
-                                const index = legendItem.datasetIndex;
-                                const ci = legend.chart;
-                                ci.data.datasets.forEach((ds, i) => {
-                                    ds.borderWidth = i === index ? 4 : 1;
-                                    ds.borderColor = i === index ? ds.borderColor.replace('20', '') : ds.borderColor + '40';
-                                });
-                                ci.update();
-                            },
-                            onLeave: function(e, legendItem, legend) {
-                                const ci = legend.chart;
-                                ci.data.datasets.forEach((ds, i) => {
-                                    ds.borderWidth = 2;
-                                    ds.borderColor = chartColors[i % chartColors.length];
-                                });
-                                ci.update();
-                            }
-                        },
+                        legend: { display: false }, // Esconde a legenda, já que os nomes estão no eixo
                         tooltip: {
                             backgroundColor: 'rgba(15, 23, 42, 0.9)',
                             titleFont: { size: 14, weight: 'bold' },
@@ -349,19 +339,27 @@
                             padding: 12,
                             callbacks: {
                                 title: function(context) {
-                                    // O título do tooltip será o Nome do Hotel em destaque
-                                    return context[0].dataset.label;
+                                    return chartData[context[0].dataIndex].name;
                                 },
                                 label: function(context) {
-                                    return `Data: ${context.label} | Preço: R$ ${context.parsed.y}`;
+                                    const p = chartData[context.dataIndex];
+                                    return [
+                                        `Posição Buy Box: ${context.dataIndex + 1}º Lugar`,
+                                        `Preço Atual: R$ ${p.price}`,
+                                        `Qtd. Alterações de Preço: ${p.changes}`
+                                    ];
                                 }
                             }
                         }
                     },
                     scales: {
-                        y: { 
-                            beginAtZero: false,
+                        x: { 
+                            beginAtZero: true,
+                            title: { display: true, text: 'Preço em R$' },
                             ticks: { callback: (val) => 'R$ ' + val }
+                        },
+                        y: {
+                            ticks: { font: { size: 12, weight: '500' } }
                         }
                     }
                 }
@@ -525,7 +523,9 @@
                         <div class="p-5 flex-1 flex flex-col">
                             <div class="flex justify-between items-start mb-2">
                                 <div class="flex items-center">
-                                    <h4 class="font-bold text-slate-800 text-lg leading-tight pr-2">${p.property_name}</h4>
+                                    <a href="${p.booking_link}" target="_blank" onclick="event.stopPropagation()" class="font-bold text-slate-800 hover:text-indigo-600 transition-colors text-lg leading-tight pr-2" title="Ver na Booking.com">
+                                        ${p.property_name}
+                                    </a>
                                     ${botIcon}
                                 </div>
                                 <button onclick="event.stopPropagation(); deleteHotel('${p.id}')" class="text-slate-400 hover:text-rose-500 transition-colors p-1" title="Excluir">
@@ -616,7 +616,7 @@
 
         loadData();
         setInterval(loadData, 30000);
-        setInterval(() => triggerScraper(false), 10 * 60 * 1000);
+        setInterval(() => triggerScraper(false), 15 * 60 * 1000);
     </script>
 </body>
 </html>

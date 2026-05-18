@@ -1,8 +1,8 @@
 {
     "scrapeInfo": {
-        "date": "2026-05-14T19:53:32.004Z",
-        "checkin": "2026-05-14",
-        "checkout": "2026-05-15"
+        "date": "2026-05-15T14:07:36.271Z",
+        "checkin": "2026-05-15",
+        "checkout": "2026-05-16"
     },
     "properties": [
         {
@@ -13,13 +13,17 @@
             "room_types": [
                 {
                     "type": "Quarto Deluxe com Cama Queen-size",
-                    "price": "R$ 389"
+                    "price": "R$ 589"
                 }
             ],
             "price_history": [
                 {
                     "date": "2026-05-14",
                     "price": 389
+                },
+                {
+                    "date": "2026-05-15",
+                    "price": 589
                 }
             ]
         },
@@ -30,32 +34,18 @@
             "main_photo_url": "imagens/hotel-solar-das-lajes-4403.jpg?t=1778678891576",
             "room_types": [
                 {
-                    "type": "Quarto Duplo Standard",
-                    "price": "R$ 380"
+                    "type": "Suíte Master com Banheira de Hidromassagem e Ar-Condicionado Split",
+                    "price": "R$ 889"
                 }
             ],
             "price_history": [
                 {
                     "date": "2026-05-14",
                     "price": 380
-                }
-            ]
-        },
-        {
-            "id": "pousada-casa-dos-contos-5885",
-            "property_name": "Pousada Casa Dos Contos",
-            "booking_link": "https://www.booking.com/hotel/br/pousada-casa-dos-contos.pt-br.html?aid=304142&label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4ApiZk9AGwAIB0gIkNTE0NTc0ZTktNmMzZS00MWY3LWE1MTgtZWIzYTM5MWRjNDgz2AIB4AIB&sid=6521d04f8ae19248757f2197b719ac32&all_sr_blocks=30645209_91920260_2_0_0&checkin=2026-05-13&checkout=2026-05-14&dest_id=-658339&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=1&highlighted_blocks=30645209_91920260_2_0_0&hpos=1&matching_block_id=30645209_91920260_2_0_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=30645209_91920260_2_0_0__40000&srepoch=1778699788&srpvid=893b8784750b0533&type=total&ucfs=1&",
-            "main_photo_url": "imagens/pousada-casa-dos-contos-5885.jpg?t=1778699862254",
-            "room_types": [
+                },
                 {
-                    "type": "Quarto Padrão (2 Adultos)",
-                    "price": "R$ 408"
-                }
-            ],
-            "price_history": [
-                {
-                    "date": "2026-05-14",
-                    "price": 408
+                    "date": "2026-05-15",
+                    "price": 889
                 }
             ]
         },
@@ -66,14 +56,18 @@
             "main_photo_url": "imagens/hotel-pousada-minas-gerais-3568.jpg?t=1778700151304",
             "room_types": [
                 {
-                    "type": "Quarto Triplo Standard",
-                    "price": "R$ 523"
+                    "type": "Quarto Standard com 2 Camas de Solteiro",
+                    "price": "R$ 801"
                 }
             ],
             "price_history": [
                 {
                     "date": "2026-05-14",
                     "price": 523
+                },
+                {
+                    "date": "2026-05-15",
+                    "price": 801
                 }
             ]
         },
@@ -84,8 +78,8 @@
             "main_photo_url": "imagens/pousada-nossa-senhora-das-merc-s-2246.jpg?t=1778704522144",
             "room_types": [
                 {
-                    "type": "Quarto Duplo Standard",
-                    "price": "R$ 320"
+                    "type": "Indisponível para as datas (Esgotado)",
+                    "price": "Preço indisponível"
                 }
             ],
             "price_history": [
@@ -102,14 +96,18 @@
             "main_photo_url": "imagens/hotel-solar-de-maria-7014.jpg?t=1778704930084",
             "room_types": [
                 {
-                    "type": "Quarto Duplo Superior com Banheira",
-                    "price": "R$ 571"
+                    "type": "Indisponível para as datas (Esgotado)",
+                    "price": "Preço indisponível"
                 }
             ],
             "price_history": [
                 {
                     "date": "2026-05-14",
                     "price": 571
+                },
+                {
+                    "date": "2026-05-15",
+                    "price": 500
                 }
             ]
         },
@@ -120,14 +118,18 @@
             "main_photo_url": "imagens/pousada-solar-das-gerais-9824.jpg?t=1778707651675",
             "room_types": [
                 {
-                    "type": "Quarto Deluxe",
-                    "price": "R$ 218"
+                    "type": "Quarto Duplo",
+                    "price": "R$ 228"
                 }
             ],
             "price_history": [
                 {
                     "date": "2026-05-14",
-                    "price": 218
+                    "price": 195
+                },
+                {
+                    "date": "2026-05-15",
+                    "price": 228
                 }
             ]
         },
@@ -139,13 +141,17 @@
             "room_types": [
                 {
                     "type": "Quarto Triplo Standard com Ventilador",
-                    "price": "R$ 390"
+                    "price": "R$ 690"
                 }
             ],
             "price_history": [
                 {
                     "date": "2026-05-14",
-                    "price": 390
+                    "price": 660
+                },
+                {
+                    "date": "2026-05-15",
+                    "price": 690
                 }
             ]
         },
@@ -156,32 +162,18 @@
             "main_photo_url": "imagens/pousada-solar-da-inconfid-ncia-0250.jpg?t=1778712803411",
             "room_types": [
                 {
-                    "type": "Quarto Superior com 2 Camas de Solteiro",
-                    "price": "R$ 469"
+                    "type": "Quarto Standard com 2 Camas de Solteiro",
+                    "price": "R$ 645"
                 }
             ],
             "price_history": [
                 {
                     "date": "2026-05-14",
                     "price": 469
-                }
-            ]
-        },
-        {
-            "id": "pousada-sinh-ol-mpia-9092",
-            "property_name": "Pousada Sinhá Olímpia",
-            "booking_link": "https://www.booking.com/hotel/br/pousada-sinha-olimpia-ouro-preto.pt-br.html?aid=304142",
-            "main_photo_url": "imagens/pousada-sinh-ol-mpia-9092.jpg?t=1778712879089",
-            "room_types": [
+                },
                 {
-                    "type": "Quarto com Cama Queen-size",
-                    "price": "R$ 383"
-                }
-            ],
-            "price_history": [
-                {
-                    "date": "2026-05-14",
-                    "price": 383
+                    "date": "2026-05-15",
+                    "price": 645
                 }
             ]
         },
@@ -193,13 +185,17 @@
             "room_types": [
                 {
                     "type": "Suíte Júnior",
-                    "price": "R$ 1.578"
+                    "price": "R$ 1.798"
                 }
             ],
             "price_history": [
                 {
                     "date": "2026-05-14",
                     "price": 1578
+                },
+                {
+                    "date": "2026-05-15",
+                    "price": 1798
                 }
             ]
         },
@@ -210,14 +206,18 @@
             "main_photo_url": "imagens/casa-dos-meninos-b-b-1680.jpg?t=1778785541267",
             "room_types": [
                 {
-                    "type": "Suíte Superior",
-                    "price": "R$ 640"
+                    "type": "Suíte King Deluxe",
+                    "price": "R$ 790"
                 }
             ],
             "price_history": [
                 {
                     "date": "2026-05-14",
                     "price": 640
+                },
+                {
+                    "date": "2026-05-15",
+                    "price": 790
                 }
             ]
         },
@@ -236,9 +236,323 @@
                 {
                     "date": "2026-05-14",
                     "price": 298
+                },
+                {
+                    "date": "2026-05-15",
+                    "price": 298
+                }
+            ]
+        },
+        {
+            "id": "mirante-hotel-4434",
+            "property_name": "Mirante Hotel",
+            "booking_link": "https://www.booking.com/hotel/br/mirante-ouro-preto.pt-br.html?aid=360920",
+            "main_photo_url": "imagens/mirante-hotel-4434.jpg?t=1778812608949",
+            "room_types": [
+                {
+                    "type": "Quarto Padrão (2 Adultos)",
+                    "price": "R$ 490"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-14",
+                    "price": 360
+                },
+                {
+                    "date": "2026-05-15",
+                    "price": 490
+                }
+            ]
+        },
+        {
+            "id": "pousada-la-os-de-minas-2901",
+            "property_name": "Pousada Laços De Minas",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-lacos-de-minas.pt-br.html?aid=360920",
+            "main_photo_url": "imagens/pousada-la-os-de-minas-2901.png?t=1778813234934",
+            "room_types": [
+                {
+                    "type": "Indisponível para as datas (Esgotado)",
+                    "price": "Preço indisponível"
+                }
+            ],
+            "price_history": []
+        },
+        {
+            "id": "pousada-sinh-ol-mpia-3866",
+            "property_name": "Pousada Sinhá Olímpia",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-sinha-olimpia-ouro-preto.pt-br.html?aid=304142",
+            "main_photo_url": "imagens/pousada-sinh-ol-mpia-3866.jpg?t=1778813415633",
+            "room_types": [
+                {
+                    "type": "Quarto com Cama Queen-size",
+                    "price": "R$ 718"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-15",
+                    "price": 718
+                }
+            ]
+        },
+        {
+            "id": "boroni-palace-hotel-7150",
+            "property_name": "Boroni Palace Hotel",
+            "booking_link": "https://www.booking.com/hotel/br/boroni-palace.pt-br.html?aid=304142",
+            "main_photo_url": "imagens/boroni-palace-hotel-7150.jpg?t=1778814133445",
+            "room_types": [
+                {
+                    "type": "Quarto Duplo Standard",
+                    "price": "R$ 468"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-14",
+                    "price": 820
+                },
+                {
+                    "date": "2026-05-15",
+                    "price": 468
+                }
+            ]
+        },
+        {
+            "id": "hotel-priskar-6657",
+            "property_name": "Hotel Priskar",
+            "booking_link": "https://www.booking.com/hotel/br/priskar.pt-br.html?aid=304142",
+            "main_photo_url": "imagens/hotel-priskar-6657.jpg?t=1778814124796",
+            "room_types": [
+                {
+                    "type": "Indisponível para as datas (Esgotado)",
+                    "price": "Preço indisponível"
+                }
+            ],
+            "price_history": []
+        },
+        {
+            "id": "hotel-pousada-cl-ssica-9277",
+            "property_name": "Hotel Pousada Clássica",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-cla-ssica.pt-br.html?aid=304142",
+            "main_photo_url": "imagens/hotel-pousada-cl-ssica-9277.jpg?t=1778815138097",
+            "room_types": [
+                {
+                    "type": "Suíte Premium",
+                    "price": "R$ 1.210"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-15",
+                    "price": 1210
+                }
+            ]
+        },
+        {
+            "id": "grande-hotel-ouro-preto-4788",
+            "property_name": "Grande Hotel Ouro Preto ",
+            "booking_link": "https://www.booking.com/hotel/br/grande-hotel-de-ouro-preto.pt-br.html?aid=304142",
+            "main_photo_url": "imagens/grande-hotel-ouro-preto-4788.jpg?t=1778816000510",
+            "room_types": [
+                {
+                    "type": "Apartamento Deluxe",
+                    "price": "R$ 680"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-15",
+                    "price": 680
+                }
+            ]
+        },
+        {
+            "id": "hotel-solar-do-ros-rio-3819",
+            "property_name": "Hotel Solar do Rosário",
+            "booking_link": "https://www.booking.com/hotel/br/solar-do-rosario.pt-br.html?aid=304142",
+            "main_photo_url": "imagens/hotel-solar-do-ros-rio-3819.jpg?t=1778815983271",
+            "room_types": [
+                {
+                    "type": "Quarto Duplo Deluxe",
+                    "price": "R$ 1.314"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-15",
+                    "price": 1314
+                }
+            ]
+        },
+        {
+            "id": "pousada-casa-dos-contos-6691",
+            "property_name": "Pousada Casa Dos Contos",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-casa-dos-contos.pt-br.html?aid=30414",
+            "main_photo_url": "imagens/pousada-casa-dos-contos-6691.jpg?t=1778820636105",
+            "room_types": [
+                {
+                    "type": "Quarto Deluxe com Cama Queen-size",
+                    "price": "R$ 471"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-15",
+                    "price": 471
+                }
+            ]
+        },
+        {
+            "id": "hotel-pousada-casa-grande-2068",
+            "property_name": "Hotel Pousada Casa Grande",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-casa-grande-ouro-preto.pt-br.html?aid=304142",
+            "main_photo_url": "imagens/hotel-pousada-casa-grande-2068.png?t=1778821207942",
+            "room_types": [
+                {
+                    "type": "Quarto Duplo Standard",
+                    "price": "R$ 429"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-15",
+                    "price": 429
+                }
+            ]
+        },
+        {
+            "id": "pousada-dos-of-cios-8903",
+            "property_name": "Pousada Dos Ofícios",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-dos-oficios.pt-br.html?aid=30414",
+            "main_photo_url": "imagens/pousada-dos-of-cios-8903.jpg?t=1778824002535",
+            "room_types": [
+                {
+                    "type": "Quarto Standard com Cama de Casal ou 2 de Solteiro",
+                    "price": "R$ 347"
+                }
+            ],
+            "price_history": [
+                {
+                    "date": "2026-05-15",
+                    "price": 347
+                }
+            ]
+        },
+        {
+            "id": "pousada-chico-anjo-5821",
+            "property_name": "Pousada Chico Anjo",
+            "booking_link": "Pousada Boutique Chico Anjo",
+            "main_photo_url": "imagens/pousada-chico-anjo-5821.jpg?t=1778854550572",
+            "room_types": [
+                {
+                    "type": "Aguardando atualização",
+                    "price": "--"
+                }
+            ]
+        },
+        {
+            "id": "chal-vila-catarina-5265",
+            "property_name": "Chalé Vila Catarina",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-vila-catarina-ouro-preto2.pt-br.html?aid=304142",
+            "main_photo_url": "imagens/chal-vila-catarina-5265.jpg?t=1778855107060",
+            "room_types": [
+                {
+                    "type": "Aguardando atualização",
+                    "price": "--"
+                }
+            ]
+        },
+        {
+            "id": "hotel-luxor-6584",
+            "property_name": "Hotel Luxor",
+            "booking_link": "https://www.booking.com/hotel/br/luxor-ouro-preto-pousada.pt-br.html?aid=304142",
+            "main_photo_url": "imagens/hotel-luxor-6584.jpg?t=1778855768418",
+            "room_types": [
+                {
+                    "type": "Aguardando atualização",
+                    "price": "--"
                 }
             ]
         }
     ],
-    "alerts": []
+    "alerts": [
+        {
+            "id": "1778822815733db5",
+            "date": "2026-05-15T05:26:55.733Z",
+            "message": "Hotel Solar De Maria reduziu o preço em 12.4% (de R$ 571 para R$ 500)",
+            "type": "success",
+            "hotelId": "hotel-solar-de-maria-7014"
+        },
+        {
+            "id": "1778814898770ox1",
+            "date": "2026-05-15T03:14:58.770Z",
+            "message": "Boroni Palace Hotel reduziu o preço em 42.9% (de R$ 820 para R$ 468)",
+            "type": "success",
+            "hotelId": "boroni-palace-hotel-7150"
+        },
+        {
+            "id": "1778814839548839",
+            "date": "2026-05-15T03:13:59.548Z",
+            "message": "Mirante Hotel aumentou o preço em 36.1% (de R$ 360 para R$ 490)",
+            "type": "warning",
+            "hotelId": "mirante-hotel-4434"
+        },
+        {
+            "id": "1778814817724ef1",
+            "date": "2026-05-15T03:13:37.724Z",
+            "message": "Pousada Casa Dos Contos reduziu o preço em 9.9% (de R$ 523 para R$ 471)",
+            "type": "success",
+            "hotelId": "pousada-casa-dos-contos-2411"
+        },
+        {
+            "id": "1778814769285yh0",
+            "date": "2026-05-15T03:12:49.285Z",
+            "message": "Casa dos Meninos B&B aumentou o preço em 23.4% (de R$ 640 para R$ 790)",
+            "type": "warning",
+            "hotelId": "casa-dos-meninos-b-b-1680"
+        },
+        {
+            "id": "177881474533656j",
+            "date": "2026-05-15T03:12:25.336Z",
+            "message": "Pousada Do Mondego aumentou o preço em 13.9% (de R$ 1578 para R$ 1798)",
+            "type": "warning",
+            "hotelId": "pousada-do-mondego-6310"
+        },
+        {
+            "id": "1778814725975z56",
+            "date": "2026-05-15T03:12:05.975Z",
+            "message": "Pousada Solar Da Inconfidência aumentou o preço em 37.5% (de R$ 469 para R$ 645)",
+            "type": "warning",
+            "hotelId": "pousada-solar-da-inconfid-ncia-0250"
+        },
+        {
+            "id": "1778814688698nn9",
+            "date": "2026-05-15T03:11:28.698Z",
+            "message": "Pousada Solar Das Gerais aumentou o preço em 16.9% (de R$ 195 para R$ 228)",
+            "type": "warning",
+            "hotelId": "pousada-solar-das-gerais-9824"
+        },
+        {
+            "id": "1778814634329boo",
+            "date": "2026-05-15T03:10:34.329Z",
+            "message": "Hotel Pousada Minas Gerais aumentou o preço em 53.2% (de R$ 523 para R$ 801)",
+            "type": "warning",
+            "hotelId": "hotel-pousada-minas-gerais-3568"
+        },
+        {
+            "id": "1778814617062m6e",
+            "date": "2026-05-15T03:10:17.062Z",
+            "message": "Hotel Solar Das Lajes aumentou o preço em 133.9% (de R$ 380 para R$ 889)",
+            "type": "warning",
+            "hotelId": "hotel-solar-das-lajes-4403"
+        },
+        {
+            "id": "17788145987710bb",
+            "date": "2026-05-15T03:09:58.771Z",
+            "message": "Hotel Recanto do Ouro  aumentou o preço em 25.7% (de R$ 389 para R$ 489)",
+            "type": "warning",
+            "hotelId": "hotel-recanto-do-ouro-1661"
+        }
+    ]
 }
