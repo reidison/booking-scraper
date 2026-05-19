@@ -12,25 +12,33 @@ puppeteer.use(StealthPlugin());
 //  CONFIGURAÇÃO
 // ══════════════════════════════════════════════════════════════
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY;          // anon key — leitura pública
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY; // service role — escrita direta
+const SUPABASE_KEY = process.env.SUPABASE_KEY;               // anon key — leitura pública
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY; // service role — escrita direta (opcional)
+const BOT_API_KEY = process.env.BOT_API_KEY || 'booking-scraper-2026';
 const INTERVALO_PADRAO_MS = 15 * 60 * 1000;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.error('❌ ERRO: SUPABASE_URL e SUPABASE_KEY são obrigatórios no .env');
     process.exit(1);
 }
-if (!SUPABASE_SERVICE_KEY) {
-    console.error('❌ ERRO: SUPABASE_SERVICE_KEY é obrigatório no .env para gravar preços diretamente.');
-    console.error('   Acesse: Supabase Dashboard → Project Settings → API → service_role secret');
-    process.exit(1);
-}
 
 // Anon key — leitura de propriedades aprovadas
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Service Role Key — grava rooms, properties e price_history sem RLS
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+// Service Role Key — grava direto nas tabelas sem RLS (preferencial)
+// Se não estiver no .env, o robô usa a Edge Function como fallback.
+const supabaseAdmin = SUPABASE_SERVICE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    : null;
+
+const BOT_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/bot-update-prices`;
+
+if (supabaseAdmin) {
+    console.log('🔑 Modo: gravação direta no Supabase (SUPABASE_SERVICE_KEY presente)');
+} else {
+    console.log('⚡ Modo: Edge Function (SUPABASE_SERVICE_KEY não encontrada no .env)');
+    console.log('   Para gravar direto, adicione SUPABASE_SERVICE_KEY ao .env');
+}
 
 // ══════════════════════════════════════════════════════════════
 //  HELPERS
@@ -89,7 +97,49 @@ async function fetchProperties() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  GRAVAR PREÇOS DIRETAMENTE NO SUPABASE (sem Edge Function)
+//  FALLBACK: ENVIAR VIA EDGE FUNCTION (quando não há SERVICE KEY)
+// ══════════════════════════════════════════════════════════════
+async function sendPricesToEdgeFunction(updates) {
+    if (updates.length === 0) {
+        console.log('ℹ️  Nenhuma atualização para enviar.');
+        return;
+    }
+    console.log(`\n📡 Enviando ${updates.length} atualização(ões) via Edge Function...`);
+    try {
+        const response = await fetch(BOT_FUNCTION_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+            },
+            body: JSON.stringify({ bot_key: BOT_API_KEY, updates }),
+        });
+        const result = await response.json();
+        if (result.success) {
+            console.log(`✅ Edge Function: ${result.changes_count} alteração(ões) gravada(s).`);
+            for (const r of (result.results || [])) {
+                const icon = r.action === 'updated' ? '💰' : r.action === 'created' ? '🆕' : '✅';
+                console.log(`   ${icon} ${r.property} / ${r.room}: R$ ${r.old_price} → R$ ${r.new_price} (${r.action})`);
+            }
+        } else {
+            console.error(`❌ Erro da Edge Function: ${result.error}`);
+        }
+    } catch (err) {
+        console.error(`❌ Erro ao chamar Edge Function: ${err.message}`);
+    }
+}
+
+// Despachante: usa gravação direta se disponível, Edge Function caso contrário
+async function saveUpdates(updates) {
+    if (supabaseAdmin) {
+        await updateSupabaseDirectly(updates);
+    } else {
+        await sendPricesToEdgeFunction(updates);
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  GRAVAR PREÇOS DIRETAMENTE NO SUPABASE (com SERVICE KEY)
 // ══════════════════════════════════════════════════════════════
 
 function normalize(s) {
@@ -499,8 +549,8 @@ async function run() {
 
     await browser.close();
 
-    // 3) Gravar preços diretamente no Supabase
-    await updateSupabaseDirectly(allUpdates);
+    // 3) Gravar preços (direto ou via Edge Function conforme .env)
+    await saveUpdates(allUpdates);
 
     console.log('\n══════════════════════════════════════════════════════════');
     console.log(`   ✅ Scraping finalizado!`);
