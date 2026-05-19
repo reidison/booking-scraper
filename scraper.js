@@ -344,30 +344,13 @@ async function run() {
 
             console.log('   🔍 Extraindo dados de preço...');
             const data = await page.evaluate(() => {
-                const bodyText = document.body.innerText;
 
-                // Detecta indisponibilidade — cobre pt-BR, pt-PT e inglês
-                const isSoldOut =
-                    bodyText.includes('Esta acomodação não tem disponibilidade') ||
-                    bodyText.includes('Este alojamento não tem disponibilidade') ||
-                    bodyText.includes('Não temos disponibilidade para estas datas') ||
-                    bodyText.includes('Não há disponibilidade para as datas') ||
-                    bodyText.includes('Não há disponibilidade para os dias') ||
-                    bodyText.includes('Sem disponibilidade para as datas') ||
-                    bodyText.includes('Datas alternativas') ||
-                    bodyText.includes('No availability for your dates') ||
-                    bodyText.includes('unavailable for your dates') ||
-                    bodyText.includes('Alternative dates') ||
-                    bodyText.includes('sold out') ||
-                    bodyText.includes('Sold out') ||
-                    // Se a tabela de disponibilidade não existe no DOM, não há preço real
-                    (!document.querySelector('.hprt-table') &&
-                     !document.querySelector('[data-testid="availability-table"]') &&
-                     !document.querySelector('table[data-block="availability_table"]'));
-
-                // Extrai todos os tipos de quarto com seus preços da tabela de disponibilidade
+                // Extrai todos os tipos de quarto com seus preços da tabela de disponibilidade.
+                // A extração é feita ANTES de qualquer checagem de isSoldOut:
+                // se encontrou preços reais na tabela, a propriedade NÃO está esgotada,
+                // independente de textos como "Datas alternativas" ou "Sold out" que podem
+                // aparecer em seções de sugestão da mesma página.
                 const extractAllRooms = () => {
-                    if (isSoldOut) return [];
 
                     const table = document.querySelector('.hprt-table') ||
                                   document.querySelector('[data-testid="availability-table"]') ||
@@ -443,7 +426,34 @@ async function run() {
                         .sort((a, b) => a.price - b.price);
                 };
 
-                return { rooms: extractAllRooms(), isSoldOut };
+                const rooms = extractAllRooms();
+
+                // Se encontrou quartos com preço → definitivamente disponível.
+                // Não consultar bodyText: frases como "Datas alternativas" ou "Sold out"
+                // podem aparecer em seções de sugestão mesmo quando a tabela tem vagas.
+                if (rooms.length > 0) {
+                    return { rooms, isSoldOut: false };
+                }
+
+                // Nenhum quarto extraído → verificar se é realmente esgotado
+                // usando apenas frases inequívocas de indisponibilidade total.
+                const bodyText = document.body.innerText;
+                const hasTable = !!(
+                    document.querySelector('.hprt-table') ||
+                    document.querySelector('[data-testid="availability-table"]') ||
+                    document.querySelector('table[data-block="availability_table"]')
+                );
+                const isSoldOut = !hasTable ||
+                    bodyText.includes('Esta acomodação não tem disponibilidade') ||
+                    bodyText.includes('Este alojamento não tem disponibilidade') ||
+                    bodyText.includes('Não temos disponibilidade para estas datas') ||
+                    bodyText.includes('Não há disponibilidade para as datas') ||
+                    bodyText.includes('Não há disponibilidade para os dias') ||
+                    bodyText.includes('Sem disponibilidade para as datas') ||
+                    bodyText.includes('No availability for your dates') ||
+                    bodyText.includes('unavailable for your dates');
+
+                return { rooms: [], isSoldOut };
             });
 
             const { rooms, isSoldOut } = data;
