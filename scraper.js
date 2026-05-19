@@ -12,20 +12,25 @@ puppeteer.use(StealthPlugin());
 //  CONFIGURAÇÃO
 // ══════════════════════════════════════════════════════════════
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY; // anon key (apenas leitura pública)
-const BOT_API_KEY = process.env.BOT_API_KEY || 'booking-scraper-2026';
-const INTERVALO_PADRAO_MS = 15 * 60 * 1000; // fallback se não houver config no banco
+const SUPABASE_KEY = process.env.SUPABASE_KEY;          // anon key — leitura pública
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY; // service role — escrita direta
+const INTERVALO_PADRAO_MS = 15 * 60 * 1000;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.error('❌ ERRO: SUPABASE_URL e SUPABASE_KEY são obrigatórios no .env');
     process.exit(1);
 }
+if (!SUPABASE_SERVICE_KEY) {
+    console.error('❌ ERRO: SUPABASE_SERVICE_KEY é obrigatório no .env para gravar preços diretamente.');
+    console.error('   Acesse: Supabase Dashboard → Project Settings → API → service_role secret');
+    process.exit(1);
+}
 
-// Cliente Supabase (anon key — só para LEITURA de propriedades aprovadas)
+// Anon key — leitura de propriedades aprovadas
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// URL da Edge Function que grava os preços (usa Service Role Key internamente)
-const BOT_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/bot-update-prices`;
+// Service Role Key — grava rooms, properties e price_history sem RLS
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // ══════════════════════════════════════════════════════════════
 //  HELPERS
@@ -84,46 +89,140 @@ async function fetchProperties() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  ENVIAR PREÇOS VIA EDGE FUNCTION (bypassa RLS)
+//  GRAVAR PREÇOS DIRETAMENTE NO SUPABASE (sem Edge Function)
 // ══════════════════════════════════════════════════════════════
-async function sendPricesToSupabase(updates) {
+
+function normalize(s) {
+    return s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+async function updateSupabaseDirectly(updates) {
     if (updates.length === 0) {
-        console.log('ℹ️  Nenhuma atualização para enviar.');
+        console.log('ℹ️  Nenhuma atualização para gravar.');
         return;
     }
 
-    console.log(`\n📡 Enviando ${updates.length} atualizações via Edge Function...`);
+    console.log(`\n💾 Gravando ${updates.length} entrada(s) diretamente no Supabase...`);
 
-    try {
-        const response = await fetch(BOT_FUNCTION_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-            },
-            body: JSON.stringify({
-                bot_key: BOT_API_KEY,
-                updates: updates,
-            }),
+    // Carrega propriedades e quartos existentes
+    const { data: properties, error: propErr } = await supabaseAdmin
+        .from('properties').select('id, name, price, source_url');
+    const { data: rooms, error: roomErr } = await supabaseAdmin
+        .from('rooms').select('id, name, price, property_id');
+
+    if (propErr || roomErr) {
+        console.error('❌ Erro ao carregar dados do Supabase:', propErr?.message || roomErr?.message);
+        return;
+    }
+
+    // Índices para lookup rápido
+    const propById = new Map();
+    const propByName = new Map();
+    for (const p of (properties || [])) {
+        propById.set(p.id, p);
+        propByName.set(normalize(p.name), p);
+    }
+
+    const roomsByProp = new Map();
+    for (const r of (rooms || [])) {
+        if (!roomsByProp.has(r.property_id)) roomsByProp.set(r.property_id, []);
+        roomsByProp.get(r.property_id).push(r);
+    }
+
+    const now = new Date().toISOString();
+    let changesCount = 0;
+    const propBatchPrices = new Map(); // property_id → menor preço do lote
+
+    for (const update of updates) {
+        const { property_id, property_name, room_name, price, source_url, status } = update;
+
+        // Lookup da propriedade
+        let prop = property_id ? propById.get(property_id) : undefined;
+        if (!prop) {
+            const key = normalize(property_name);
+            prop = propByName.get(key);
+            if (!prop) {
+                for (const [k, v] of propByName) {
+                    if (k.includes(key) || key.includes(k)) { prop = v; break; }
+                }
+            }
+        }
+        if (!prop) {
+            console.log(`   ⚠️  Propriedade não encontrada no banco: ${property_name}`);
+            continue;
+        }
+
+        // Esgotado
+        if (status === 'sold_out' || price <= 0) {
+            if (prop.price > 0) {
+                await supabaseAdmin.from('price_history').insert({
+                    property_id: prop.id, room_id: null,
+                    room_name: 'Indisponível (Esgotado)',
+                    old_price: prop.price, new_price: 0,
+                    source_url: source_url || null, checked_at: now,
+                });
+                changesCount++;
+                console.log(`   🚫 ${prop.name}: esgotado (era R$ ${prop.price})`);
+            }
+            propBatchPrices.set(prop.id, 0);
+            continue;
+        }
+
+        // Rastreia menor preço do lote para esta propriedade
+        const batch = propBatchPrices.get(prop.id);
+        if (batch === undefined || (batch > 0 && price < batch)) {
+            propBatchPrices.set(prop.id, price);
+        }
+
+        // Encontrar quarto pelo nome
+        const propRooms = roomsByProp.get(prop.id) || [];
+        const normRoom = normalize(room_name || 'geral');
+        let matchedRoom = propRooms.find(r => {
+            const n = normalize(r.name);
+            return n === normRoom || n.includes(normRoom) || normRoom.includes(n);
         });
 
-        const result = await response.json();
-
-        if (result.success) {
-            console.log(`✅ Sucesso! ${result.changes_count} alteração(ões) de preço gravadas.`);
-            if (result.not_found?.length > 0) {
-                console.log(`⚠️  Não encontradas no banco: ${result.not_found.join(', ')}`);
-            }
-            for (const r of (result.results || [])) {
-                const icon = r.action === 'updated' ? '💰' : r.action === 'created' ? '🆕' : '✅';
-                console.log(`   ${icon} ${r.property} / ${r.room}: R$ ${r.old_price} → R$ ${r.new_price} (${r.action})`);
+        if (matchedRoom) {
+            if (matchedRoom.price !== price) {
+                await supabaseAdmin.from('rooms').update({ price }).eq('id', matchedRoom.id);
+                await supabaseAdmin.from('price_history').insert({
+                    property_id: prop.id, room_id: matchedRoom.id,
+                    room_name: matchedRoom.name,
+                    old_price: matchedRoom.price, new_price: price,
+                    source_url: source_url || null, checked_at: now,
+                });
+                changesCount++;
+                console.log(`   💰 ${prop.name} / ${matchedRoom.name}: R$ ${matchedRoom.price} → R$ ${price}`);
+            } else {
+                console.log(`   ✅ ${prop.name} / ${matchedRoom.name}: sem alteração (R$ ${price})`);
             }
         } else {
-            console.error(`❌ Erro da Edge Function: ${result.error}`);
+            // Criar novo quarto
+            const { data: newRoom } = await supabaseAdmin.from('rooms').insert({
+                property_id: prop.id,
+                name: room_name || 'Quarto Padrão',
+                price,
+            }).select('id').single();
+
+            if (newRoom) {
+                await supabaseAdmin.from('price_history').insert({
+                    property_id: prop.id, room_id: newRoom.id,
+                    room_name: room_name || 'Quarto Padrão',
+                    old_price: prop.price, new_price: price,
+                    source_url: source_url || null, checked_at: now,
+                });
+                changesCount++;
+                console.log(`   🆕 ${prop.name} / ${room_name}: novo quarto criado (R$ ${price})`);
+            }
         }
-    } catch (error) {
-        console.error(`❌ Erro ao enviar para Edge Function: ${error.message}`);
     }
+
+    // Atualiza properties.price com o menor preço do lote por propriedade
+    for (const [propId, minPrice] of propBatchPrices) {
+        await supabaseAdmin.from('properties').update({ price: minPrice }).eq('id', propId);
+    }
+
+    console.log(`\n✅ ${changesCount} alteração(ões) gravada(s) diretamente no Supabase.`);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -390,8 +489,8 @@ async function run() {
 
     await browser.close();
 
-    // 3) Enviar todos os preços via Edge Function
-    await sendPricesToSupabase(allUpdates);
+    // 3) Gravar preços diretamente no Supabase
+    await updateSupabaseDirectly(allUpdates);
 
     console.log('\n══════════════════════════════════════════════════════════');
     console.log(`   ✅ Scraping finalizado!`);
