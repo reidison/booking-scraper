@@ -1,26 +1,28 @@
 @echo off
-title Painel Booking - Servidor Local
+title Robo Booking-Scraper → Lovable
 color 0A
 echo =======================================================
-echo          SISTEMA AUTOMATICO DE BUSCA BOOKING
-echo =======================================================
-echo.
-echo Iniciando o Servidor Local...
-echo Por favor, NAO FECHE esta janela enquanto estiver usando o painel.
-echo.
-
-:: Inicia o servidor Node em segundo plano e aguarda 2 segundos
-start /B node server.js
-timeout /t 2 >nul
-
-echo.
-echo =======================================================
-echo ABRINDO PAINEL NO NAVEGADOR...
+echo    ROBO BOOKING-SCRAPER → LOVABLE
+echo    Le propriedades do Lovable e atualiza precos
+echo    Atualiza a cada 15 minutos (configuravel no painel)
 echo =======================================================
 echo.
 
-:: Abre o painel HTML automaticamente no navegador padrao
-start http://localhost:3000
+:: Inicia o robo
+echo Iniciando robo de scraping...
+echo.
+echo  NAO FECHE esta janela! O robo roda continuamente.
+echo  Pressione Ctrl+C para parar.
+echo.
 
-:: Mantem a janela aberta
-cmd 
+node scraper.js
+
+:: Se o scraper parar por erro, reinicia automaticamente
+:loop
+echo.
+echo =======================================================
+echo O robo parou. Reiniciando em 10 segundos...
+echo =======================================================
+timeout /t 10 >nul
+node scraper.js
+goto loop
