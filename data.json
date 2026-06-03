@@ -9,7 +9,7 @@
             "id": "hotel-recanto-do-ouro-1661",
             "property_name": "Hotel Recanto do Ouro ",
             "booking_link": "https://www.booking.com/hotel/br/recanto-da-serra-ouro-preto.pt-br.html?aid=304142&label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4As3akdAGwAIB0gIkMDcxOTU0NDAtYzlmMi00MGI3LTk0MmMtOTVlMmE2ZGJiZDll2AIB4AIB&sid=6521d04f8ae19248757f2197b719ac32&all_sr_blocks=517855001_334258604_2_1_0&checkin=2026-05-13&checkout=2026-05-14&dest_id=5178550&dest_type=hotel&dist=0&group_adults=2&group_children=0&hapos=1&highlighted_blocks=517855001_334258604_2_1_0&hpos=1&matching_block_id=517855001_334258604_2_1_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=517855001_334258604_2_1_0__36900&srepoch=1778676880&srpvid=25d15ac54dc6024d&type=total&ucfs=1&",
-            "main_photo_url": "imagens/hotel-recanto-do-ouro-1661.jpg?t=1778677240582",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/1d1487ce-4088-45c8-8190-83ba0e865c96.jpg",
             "room_types": [
                 {
                     "type": "Quarto Deluxe com Cama Queen-size",
@@ -31,7 +31,7 @@
             "id": "hotel-solar-das-lajes-4403",
             "property_name": "Hotel Solar Das Lajes",
             "booking_link": "https://www.booking.com/hotel/br/solar-das-lajes.pt-br.html?aid=304142&label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4As3akdAGwAIB0gIkMDcxOTU0NDAtYzlmMi00MGI3LTk0MmMtOTVlMmE2ZGJiZDll2AIB4AIB&sid=6521d04f8ae19248757f2197b719ac32&all_sr_blocks=30643904_86319147_3_1_0&checkin=2026-05-13&checkout=2026-05-14&dest_id=306439&dest_type=hotel&dist=0&group_adults=2&group_children=0&hapos=1&highlighted_blocks=30643904_86319147_3_1_0&hpos=1&matching_block_id=30643904_86319147_3_1_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=30643904_86319147_3_1_0__48000&srepoch=1778678501&srpvid=ad0b5def129508b7&type=total&ucfs=1&",
-            "main_photo_url": "imagens/hotel-solar-das-lajes-4403.jpg?t=1778678891576",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/941c3ed6-7eac-4c1a-a889-3b2ba4a9bd97.jpg",
             "room_types": [
                 {
                     "type": "Suíte Master com Banheira de Hidromassagem e Ar-Condicionado Split",
@@ -53,7 +53,7 @@
             "id": "hotel-pousada-minas-gerais-3568",
             "property_name": "Hotel Pousada Minas Gerais",
             "booking_link": "https://www.booking.com/hotel/br/pousada-minas-gerais.pt-br.html?label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4ApiZk9AGwAIB0gIkNTE0NTc0ZTktNmMzZS00MWY3LWE1MTgtZWIzYTM5MWRjNDgz2AIB4AIB&aid=304142&ucfs=1&arphpl=1&checkin=2026-05-13&checkout=2026-05-14&dest_id=302115&dest_type=hotel&group_adults=2&req_adults=2&no_rooms=1&group_children=0&req_children=0&ucfac=3151",
-            "main_photo_url": "imagens/hotel-pousada-minas-gerais-3568.jpg?t=1778700151304",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/2d34f0bf-cbd7-4928-9393-e4bdd49fdc2d.jpg",
             "room_types": [
                 {
                     "type": "Quarto Standard com 2 Camas de Solteiro",
@@ -75,7 +75,7 @@
             "id": "pousada-nossa-senhora-das-merc-s-2246",
             "property_name": "Pousada Nossa Senhora Das Mercês",
             "booking_link": "https://www.booking.com/hotel/br/pousada-solar-nossa-senhora-das-merces.pt-br.html?aid=304142&label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4AsC-k9AGwAIB0gIkOWFiNzU1NDctNmIxOC00NmE5LTgxYjAtZTI1OWMwN2IyMzYx2AIB4AIB&sid=6521d04f8ae19248757f2197b719ac32&checkin=2026-05-13&checkout=2026-05-14&dest_id=625920&dest_type=hotel&dist=0&group_adults=2&group_children=0&hapos=1&hpos=1&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&soh=1&sr_order=popularity&srepoch=1778704370&srpvid=4bae9077b2c5005e&type=total&ucfs=1&#no_availability_msg",
-            "main_photo_url": "imagens/pousada-nossa-senhora-das-merc-s-2246.jpg?t=1778704522144",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/0f0fc50a-a4b3-48c4-860b-72f9e378ace8.jpg",
             "room_types": [
                 {
                     "type": "Indisponível para as datas (Esgotado)",
@@ -93,7 +93,7 @@
             "id": "hotel-solar-de-maria-7014",
             "property_name": "Hotel Solar De Maria",
             "booking_link": "https://www.booking.com/hotel/br/solar-de-maria.pt-br.html?aid=304142&label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4AsC-k9AGwAIB0gIkOWFiNzU1NDctNmIxOC00NmE5LTgxYjAtZTI1OWMwN2IyMzYx2AIB4AIB&sid=6521d04f8ae19248757f2197b719ac32&all_sr_blocks=30715403_91920317_0_1_0&checkin=2026-05-13&checkout=2026-05-14&dest_id=375964&dest_type=hotel&dist=0&group_adults=2&group_children=0&hapos=10&highlighted_blocks=30715403_91920317_0_1_0&hpos=10&matching_block_id=30715403_91920317_0_1_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=30715403_91920317_0_1_0__43920&srepoch=1778704766&srpvid=a6ea913572a40a49&type=total&ucfs=1&",
-            "main_photo_url": "imagens/hotel-solar-de-maria-7014.jpg?t=1778704930084",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/b52bf707-3499-4fc7-a14a-584632b32a73.jpg",
             "room_types": [
                 {
                     "type": "Indisponível para as datas (Esgotado)",
@@ -115,7 +115,7 @@
             "id": "pousada-solar-das-gerais-9824",
             "property_name": "Pousada Solar Das Gerais",
             "booking_link": "https://www.booking.com/hotel/br/pertin-da-praca-hostel.pt-br.html?aid=304142&label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4ApiZk9AGwAIB0gIkNTE0NTc0ZTktNmMzZS00MWY3LWE1MTgtZWIzYTM5MWRjNDgz2AIB4AIB&sid=6521d04f8ae19248757f2197b719ac32&all_sr_blocks=1137120223_411181983_2_1_0&checkin=2026-05-13&checkout=2026-05-14&dest_id=11371202&dest_type=hotel&dist=0&group_adults=2&group_children=0&hapos=1&highlighted_blocks=1137120223_411181983_2_1_0&hpos=1&matching_block_id=1137120223_411181983_2_1_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=1137120223_411181983_2_1_0__19500&srepoch=1778707573&srpvid=ce9896b85b1c0003&type=total&ucfs=1&",
-            "main_photo_url": "imagens/pousada-solar-das-gerais-9824.jpg?t=1778707651675",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/1399c146-a9ee-4c3c-b6a6-23597a203d15.jpg",
             "room_types": [
                 {
                     "type": "Quarto Duplo",
@@ -137,7 +137,7 @@
             "id": "pousada-arcadia-mineira-2302",
             "property_name": "Pousada Arcadia Mineira",
             "booking_link": "https://www.booking.com/hotel/br/arcadia-mineira.pt-br.html?aid=304142&label=gen173rf-10CAsoIEIScG91c2FkYS1kby1tb25kZWdvSC1YA2ggiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBogIObG9jYWxob3N0OjMwMDCoAgG4AsC-k9AGwAIB0gIkOWFiNzU1NDctNmIxOC00NmE5LTgxYjAtZTI1OWMwN2IyMzYx2AIB4AIB&sid=6521d04f8ae19248757f2197b719ac32&all_sr_blocks=63532402_88845009_0_1_0&checkin=2026-05-13&checkout=2026-05-14&dest_id=-658339&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=3&highlighted_blocks=63532402_88845009_0_1_0&hpos=3&matching_block_id=63532402_88845009_0_1_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=63532402_88845009_0_1_0__39000&srepoch=1778707734&srpvid=8aeb97076a201001&type=total&ucfs=1&",
-            "main_photo_url": "imagens/pousada-arcadia-mineira-2302.jpg?t=1778708410752",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/8298def9-70b8-413e-9cd4-4cbd74debb9e.jpg",
             "room_types": [
                 {
                     "type": "Quarto Triplo Standard com Ventilador",
@@ -159,7 +159,7 @@
             "id": "pousada-solar-da-inconfid-ncia-0250",
             "property_name": "Pousada Solar Da Inconfidência",
             "booking_link": "https://www.booking.com/hotel/br/pousada-toledo.pt-br.html?aid=304142",
-            "main_photo_url": "imagens/pousada-solar-da-inconfid-ncia-0250.jpg?t=1778712803411",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/aaefc844-8259-41c3-84a4-5b7c711424a0.jpg",
             "room_types": [
                 {
                     "type": "Quarto Standard com 2 Camas de Solteiro",
@@ -181,7 +181,7 @@
             "id": "pousada-do-mondego-6310",
             "property_name": "Pousada Do Mondego",
             "booking_link": "https://www.booking.com/hotel/br/pousada-do-mondego.pt-br.html?aid=304142",
-            "main_photo_url": "imagens/pousada-do-mondego-6310.jpg?t=1778713071776",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/d54fbd02-2bcd-48c8-93bf-9a5e134724e8.jpg",
             "room_types": [
                 {
                     "type": "Suíte Júnior",
@@ -203,7 +203,7 @@
             "id": "casa-dos-meninos-b-b-1680",
             "property_name": "Casa dos Meninos B&B",
             "booking_link": "https://www.booking.com/hotel/br/casa-dos-meninos-b-amp-b.pt-br.html?aid=304142",
-            "main_photo_url": "imagens/casa-dos-meninos-b-b-1680.jpg?t=1778785541267",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/a8dffd31-c574-44ad-b07f-7dc209aef705.jpg",
             "room_types": [
                 {
                     "type": "Suíte King Deluxe",
@@ -225,7 +225,7 @@
             "id": "pousada-do-ouvidor-4130",
             "property_name": "Pousada Do Ouvidor",
             "booking_link": "https://www.booking.com/hotel/br/pousada-do-ouvidor.pt-br.html?aid=304142",
-            "main_photo_url": "imagens/pousada-do-ouvidor-4130.jpg?t=1778787426831",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/419f024e-f060-4585-913b-a65d1f9b7f11.jpg",
             "room_types": [
                 {
                     "type": "Quarto Duplo Econômico Sem Vista",
@@ -247,7 +247,7 @@
             "id": "mirante-hotel-4434",
             "property_name": "Mirante Hotel",
             "booking_link": "https://www.booking.com/hotel/br/mirante-ouro-preto.pt-br.html?aid=360920",
-            "main_photo_url": "imagens/mirante-hotel-4434.jpg?t=1778812608949",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/87ca6053-4f7d-422e-b301-d607cf1bb19f.jpg",
             "room_types": [
                 {
                     "type": "Quarto Padrão (2 Adultos)",
@@ -269,7 +269,7 @@
             "id": "pousada-la-os-de-minas-2901",
             "property_name": "Pousada Laços De Minas",
             "booking_link": "https://www.booking.com/hotel/br/pousada-lacos-de-minas.pt-br.html?aid=360920",
-            "main_photo_url": "imagens/pousada-la-os-de-minas-2901.png?t=1778813234934",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/63bf4b55-b601-402c-90a4-6ff3eecc5dbf.png",
             "room_types": [
                 {
                     "type": "Indisponível para as datas (Esgotado)",
@@ -282,7 +282,7 @@
             "id": "pousada-sinh-ol-mpia-3866",
             "property_name": "Pousada Sinhá Olímpia",
             "booking_link": "https://www.booking.com/hotel/br/pousada-sinha-olimpia-ouro-preto.pt-br.html?aid=304142",
-            "main_photo_url": "imagens/pousada-sinh-ol-mpia-3866.jpg?t=1778813415633",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/a2719566-6a17-4663-ae8a-71b9ba692def.jpg",
             "room_types": [
                 {
                     "type": "Quarto com Cama Queen-size",
@@ -300,7 +300,7 @@
             "id": "boroni-palace-hotel-7150",
             "property_name": "Boroni Palace Hotel",
             "booking_link": "https://www.booking.com/hotel/br/boroni-palace.pt-br.html?aid=304142",
-            "main_photo_url": "imagens/boroni-palace-hotel-7150.jpg?t=1778814133445",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/28751f10-2a31-4db1-8790-ce890f742ab5.jpg",
             "room_types": [
                 {
                     "type": "Quarto Duplo Standard",
@@ -322,7 +322,7 @@
             "id": "hotel-priskar-6657",
             "property_name": "Hotel Priskar",
             "booking_link": "https://www.booking.com/hotel/br/priskar.pt-br.html?aid=304142",
-            "main_photo_url": "imagens/hotel-priskar-6657.jpg?t=1778814124796",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/64f2586d-8356-4ea5-a842-37e9ca0a2e20.jpg",
             "room_types": [
                 {
                     "type": "Indisponível para as datas (Esgotado)",
@@ -335,7 +335,7 @@
             "id": "hotel-pousada-cl-ssica-9277",
             "property_name": "Hotel Pousada Clássica",
             "booking_link": "https://www.booking.com/hotel/br/pousada-cla-ssica.pt-br.html?aid=304142",
-            "main_photo_url": "imagens/hotel-pousada-cl-ssica-9277.jpg?t=1778815138097",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/78c76881-48e6-4e77-81b1-23ea7b3ea94c.jpg",
             "room_types": [
                 {
                     "type": "Suíte Premium",
@@ -353,7 +353,7 @@
             "id": "grande-hotel-ouro-preto-4788",
             "property_name": "Grande Hotel Ouro Preto ",
             "booking_link": "https://www.booking.com/hotel/br/grande-hotel-de-ouro-preto.pt-br.html?aid=304142",
-            "main_photo_url": "imagens/grande-hotel-ouro-preto-4788.jpg?t=1778816000510",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/bc51bba7-c2da-43b7-89aa-a004566bce28.jpg",
             "room_types": [
                 {
                     "type": "Apartamento Deluxe",
@@ -371,7 +371,7 @@
             "id": "hotel-solar-do-ros-rio-3819",
             "property_name": "Hotel Solar do Rosário",
             "booking_link": "https://www.booking.com/hotel/br/solar-do-rosario.pt-br.html?aid=304142",
-            "main_photo_url": "imagens/hotel-solar-do-ros-rio-3819.jpg?t=1778815983271",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/8794d240-c3ab-4f96-a2e0-19a3124e51d2.jpg",
             "room_types": [
                 {
                     "type": "Quarto Duplo Deluxe",
@@ -389,7 +389,7 @@
             "id": "pousada-casa-dos-contos-6691",
             "property_name": "Pousada Casa Dos Contos",
             "booking_link": "https://www.booking.com/hotel/br/pousada-casa-dos-contos.pt-br.html?aid=30414",
-            "main_photo_url": "imagens/pousada-casa-dos-contos-6691.jpg?t=1778820636105",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/68251281-299e-4118-8f99-e21db4768bb6.jpg",
             "room_types": [
                 {
                     "type": "Quarto Deluxe com Cama Queen-size",
@@ -407,7 +407,7 @@
             "id": "hotel-pousada-casa-grande-2068",
             "property_name": "Hotel Pousada Casa Grande",
             "booking_link": "https://www.booking.com/hotel/br/pousada-casa-grande-ouro-preto.pt-br.html?aid=304142",
-            "main_photo_url": "imagens/hotel-pousada-casa-grande-2068.png?t=1778821207942",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/f18db2dd-3cb2-435a-a021-c81f8726f601.png",
             "room_types": [
                 {
                     "type": "Quarto Duplo Standard",
@@ -425,7 +425,7 @@
             "id": "pousada-dos-of-cios-8903",
             "property_name": "Pousada Dos Ofícios",
             "booking_link": "https://www.booking.com/hotel/br/pousada-dos-oficios.pt-br.html?aid=30414",
-            "main_photo_url": "imagens/pousada-dos-of-cios-8903.jpg?t=1778824002535",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/d82757f0-02b4-499a-b6f6-87f9603117ec.jpg",
             "room_types": [
                 {
                     "type": "Quarto Standard com Cama de Casal ou 2 de Solteiro",
@@ -443,7 +443,7 @@
             "id": "pousada-chico-anjo-5821",
             "property_name": "Pousada Chico Anjo",
             "booking_link": "Pousada Boutique Chico Anjo",
-            "main_photo_url": "imagens/pousada-chico-anjo-5821.jpg?t=1778854550572",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/36c1b0e3-f9c4-4818-8557-a0fc18491962.jpg",
             "room_types": [
                 {
                     "type": "Aguardando atualização",
@@ -455,7 +455,7 @@
             "id": "chal-vila-catarina-5265",
             "property_name": "Chalé Vila Catarina",
             "booking_link": "https://www.booking.com/hotel/br/pousada-vila-catarina-ouro-preto2.pt-br.html?aid=304142",
-            "main_photo_url": "imagens/chal-vila-catarina-5265.jpg?t=1778855107060",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/e034bf5d-8874-4c2c-81f2-853269155a32.jpg",
             "room_types": [
                 {
                     "type": "Aguardando atualização",
@@ -467,7 +467,31 @@
             "id": "hotel-luxor-6584",
             "property_name": "Hotel Luxor",
             "booking_link": "https://www.booking.com/hotel/br/luxor-ouro-preto-pousada.pt-br.html?aid=304142",
-            "main_photo_url": "imagens/hotel-luxor-6584.jpg?t=1778855768418",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/4014f269-16f8-41bc-ad28-980e75d6a355.jpg",
+            "room_types": [
+                {
+                    "type": "Aguardando atualização",
+                    "price": "--"
+                }
+            ]
+        },
+        {
+            "id": "pousada-caminhos-da-liberdade-4849",
+            "property_name": " Pousada Caminhos da Liberdade ",
+            "booking_link": "Caminhos da Liberdade Pousadahttps://www.booking.com/hotel/br/pousada-caminhos-da-liberdade.pt-br.html?aid=304142",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/adb98d59-04aa-4b91-bcd3-d02cd9de3d40.jpg",
+            "room_types": [
+                {
+                    "type": "Aguardando atualização",
+                    "price": "--"
+                }
+            ]
+        },
+        {
+            "id": "pousada-dos-bandeirantes-1263",
+            "property_name": "Pousada dos Bandeirantes",
+            "booking_link": "https://www.booking.com/hotel/br/pousada-dos-bandeirantes.pt-br.html?aid=304142",
+            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/20f36e6e-1a8c-4e6c-9492-d0f5a9594f36.png",
             "room_types": [
                 {
                     "type": "Aguardando atualização",
