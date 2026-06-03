@@ -660,7 +660,31 @@ async function run() {
                                 const price = parsePriceText(txt);
                                 if (price === null || isNaN(price) || price < 20) continue;
 
-                                rowPrice = price;
+                                // Encontra o container da célula de preço para buscar possíveis taxas
+                                let cell = el;
+                                while (cell && cell.parentElement) {
+                                    const className = (cell.className || '').toString().toLowerCase();
+                                    if (cell.tagName === 'TD' || className.includes('price') || className.includes('cell') || cell.tagName === 'TR') {
+                                        break;
+                                    }
+                                    cell = cell.parentElement;
+                                }
+                                const cellText = cell ? cell.innerText || '' : '';
+
+                                // Procura por taxas adicionais como "+ R$ 20 de impostos e taxas"
+                                const taxMatch = cellText.match(/\+\s*(?:R\$|\$)\s*([\d.,]+)/i);
+                                if (taxMatch) {
+                                    const taxStr = taxMatch[1];
+                                    const taxPrice = parsePriceText("R$ " + taxStr);
+                                    if (taxPrice !== null && !isNaN(taxPrice)) {
+                                        rowPrice = price + taxPrice;
+                                    } else {
+                                        rowPrice = price;
+                                    }
+                                } else {
+                                    rowPrice = price;
+                                }
+
                                 foundPrice = true;
                                 break;
                             }
@@ -705,8 +729,27 @@ async function run() {
 
                         const price = parsePriceText(el.innerText);
                         if (price !== null && !isNaN(price) && price >= 20) {
-                            if (lowestTablePrice === null || price < lowestTablePrice) {
-                                lowestTablePrice = price;
+                            let finalPrice = price;
+                            let cell = el;
+                            while (cell && cell.parentElement && cell !== table) {
+                                const className = (cell.className || '').toString().toLowerCase();
+                                if (cell.tagName === 'TD' || className.includes('price') || className.includes('cell') || cell.tagName === 'TR') {
+                                    break;
+                                }
+                                cell = cell.parentElement;
+                            }
+                            const cellText = cell ? cell.innerText || '' : '';
+                            const taxMatch = cellText.match(/\+\s*(?:R\$|\$)\s*([\d.,]+)/i);
+                            if (taxMatch) {
+                                const taxStr = taxMatch[1];
+                                const taxPrice = parsePriceText("R$ " + taxStr);
+                                if (taxPrice !== null && !isNaN(taxPrice)) {
+                                    finalPrice = price + taxPrice;
+                                }
+                            }
+
+                            if (lowestTablePrice === null || finalPrice < lowestTablePrice) {
+                                lowestTablePrice = finalPrice;
                             }
                         }
                     }
