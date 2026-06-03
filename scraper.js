@@ -219,6 +219,7 @@ async function updateSupabaseDirectly(updates) {
     for (const [propId, propUpdates] of updatesByProp.entries()) {
         const prop = propUpdates[0].resolved_prop;
         const propRooms = roomsByProp.get(propId) || [];
+        const latestSourceUrl = propUpdates[0].source_url || prop.source_url;
 
         // Checa se toda a propriedade foi marcada como esgotada no lote
         const isPropSoldOut = propUpdates.every(u => u.status === 'sold_out' || u.price <= 0);
@@ -233,7 +234,7 @@ async function updateSupabaseDirectly(updates) {
                     room_name: room.name + " (Excluído - Esgotado)",
                     old_price: room.price,
                     new_price: 0,
-                    source_url: propUpdates[0].source_url || null,
+                    source_url: latestSourceUrl,
                     checked_at: now,
                     verified_at: now,
                 });
@@ -241,20 +242,22 @@ async function updateSupabaseDirectly(updates) {
                 console.log(`   🗑️ ${prop.name} / ${room.name}: esgotado e excluído (era R$ ${room.price})`);
             }
             
-            // Zera preço base da propriedade
-            if (prop.price > 0) {
-                await supabaseAdmin.from('properties').update({ price: 0 }).eq('id', propId);
-                await supabaseAdmin.from('price_history').insert({
-                    property_id: propId,
-                    room_id: null,
-                    room_name: 'Indisponível (Esgotado)',
-                    old_price: prop.price,
-                    new_price: 0,
-                    source_url: propUpdates[0].source_url || null,
-                    checked_at: now,
-                    verified_at: now,
-                });
-                changesCount++;
+            // Zera preço base da propriedade e atualiza URL
+            if (prop.price > 0 || prop.source_url !== latestSourceUrl) {
+                await supabaseAdmin.from('properties').update({ price: 0, source_url: latestSourceUrl }).eq('id', propId);
+                if (prop.price > 0) {
+                    await supabaseAdmin.from('price_history').insert({
+                        property_id: propId,
+                        room_id: null,
+                        room_name: 'Indisponível (Esgotado)',
+                        old_price: prop.price,
+                        new_price: 0,
+                        source_url: latestSourceUrl,
+                        checked_at: now,
+                        verified_at: now,
+                    });
+                    changesCount++;
+                }
                 console.log(`   🚫 ${prop.name}: esgotado (era R$ ${prop.price})`);
             }
             continue;
@@ -359,7 +362,7 @@ async function updateSupabaseDirectly(updates) {
                     room_name: room.name + ' (Excluído)',
                     old_price: room.price,
                     new_price: 0,
-                    source_url: propUpdates[0].source_url || null,
+                    source_url: latestSourceUrl,
                     checked_at: now,
                     verified_at: now,
                 });
@@ -368,22 +371,24 @@ async function updateSupabaseDirectly(updates) {
             }
         }
 
-        // Atualiza preço base da propriedade com o menor preço ativo da rodada
+        // Atualiza preço base da propriedade com o menor preço ativo da rodada e atualiza URL
         const minPrice = activeRoomPrices.length > 0 ? Math.min(...activeRoomPrices) : 0;
-        if (prop.price !== minPrice) {
-            await supabaseAdmin.from('properties').update({ price: minPrice }).eq('id', propId);
-            await supabaseAdmin.from('price_history').insert({
-                property_id: propId,
-                room_id: null,
-                room_name: minPrice > 0 ? 'Preço Base Atualizado' : 'Indisponível (Esgotado)',
-                old_price: prop.price,
-                new_price: minPrice,
-                source_url: propUpdates[0].source_url || null,
-                checked_at: now,
-                verified_at: now,
-            });
-            changesCount++;
-            console.log(`   🏨 ${prop.name}: preço base atualizado para R$ ${minPrice} (era R$ ${prop.price})`);
+        if (prop.price !== minPrice || prop.source_url !== latestSourceUrl) {
+            await supabaseAdmin.from('properties').update({ price: minPrice, source_url: latestSourceUrl }).eq('id', propId);
+            if (prop.price !== minPrice) {
+                await supabaseAdmin.from('price_history').insert({
+                    property_id: propId,
+                    room_id: null,
+                    room_name: minPrice > 0 ? 'Preço Base Atualizado' : 'Indisponível (Esgotado)',
+                    old_price: prop.price,
+                    new_price: minPrice,
+                    source_url: latestSourceUrl,
+                    checked_at: now,
+                    verified_at: now,
+                });
+                changesCount++;
+            }
+            console.log(`   🏨 ${prop.name}: preço base/URL atualizado(s) no Supabase (menor preço: R$ ${minPrice})`);
         }
     }
 
@@ -437,10 +442,18 @@ async function run() {
         const prop = properties[i];
         console.log(`\n[${i + 1}/${properties.length}] 🏨 ${prop.name}`);
 
-        // Construir URL com datas dinâmicas
+        // Construir URL com datas dinâmicas ou preservadas
         let urlToScrape;
         try {
             urlToScrape = new URL(prop.source_url.trim());
+            
+            // Extrair parâmetros funcionais originais antes de limpar a query string
+            const originalCheckin = urlToScrape.searchParams.get('checkin');
+            const originalCheckout = urlToScrape.searchParams.get('checkout');
+            const originalAdults = urlToScrape.searchParams.get('group_adults') || urlToScrape.searchParams.get('req_adults');
+            const originalChildren = urlToScrape.searchParams.get('group_children') || urlToScrape.searchParams.get('req_children');
+            const originalNoRooms = urlToScrape.searchParams.get('no_rooms');
+            const originalRoom1 = urlToScrape.searchParams.get('room1');
             
             // Limpar parâmetros antigos (como aid, label) para evitar redirecionamento forçado para a busca
             urlToScrape.search = '';
@@ -455,15 +468,29 @@ async function run() {
                 urlToScrape.pathname = p.replace(/\/$/, '') + '.pt-br.html';
             }
             urlToScrape.searchParams.set('lang', 'pt-br');
-            urlToScrape.searchParams.set('checkin', checkinDate);
-            urlToScrape.searchParams.set('checkout', checkoutDate);
-            urlToScrape.searchParams.set('group_adults', '2');
-            urlToScrape.searchParams.set('group_children', '0');
-            urlToScrape.searchParams.set('no_rooms', '1');
+            
+            // Definir checkin e checkout (prioridade para o original)
+            if (originalCheckin && originalCheckout) {
+                urlToScrape.searchParams.set('checkin', originalCheckin);
+                urlToScrape.searchParams.set('checkout', originalCheckout);
+            } else {
+                urlToScrape.searchParams.set('checkin', checkinDate);
+                urlToScrape.searchParams.set('checkout', checkoutDate);
+            }
+            
+            // Definir quantidade de hóspedes e quartos (prioridade para o original)
+            urlToScrape.searchParams.set('group_adults', originalAdults || '2');
+            urlToScrape.searchParams.set('group_children', originalChildren || '0');
+            urlToScrape.searchParams.set('no_rooms', originalNoRooms || '1');
+            if (originalRoom1) {
+                urlToScrape.searchParams.set('room1', originalRoom1);
+            }
         } catch (e) {
             console.log(`   ❌ URL inválida: ${prop.source_url}`);
             continue;
         }
+
+        console.log(`   📅 Pesquisando período: ${urlToScrape.searchParams.get('checkin')} a ${urlToScrape.searchParams.get('checkout')} (${urlToScrape.searchParams.get('group_adults')} adulto(s), ${urlToScrape.searchParams.get('group_children')} criança(s))`);
 
         const page = await browser.newPage();
 
@@ -480,8 +507,10 @@ async function run() {
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         });
 
+        let currentUrl = prop.source_url.trim();
         try {
             await page.goto(urlToScrape.toString(), { waitUntil: 'domcontentloaded', timeout: 60000 });
+            currentUrl = page.url() || urlToScrape.toString();
 
             // Aceitar cookie consent (GDPR) — bloqueia a tabela de disponibilidade se não for dispensado
             const cookieSelectors = [
@@ -787,7 +816,7 @@ async function run() {
                     price: lowestTablePrice,
                     adults: 2,
                     children: 0,
-                    source_url: prop.source_url.trim(),
+                    source_url: currentUrl,
                     status: 'available',
                 });
             } else if (isSoldOut || rooms.length === 0) {
@@ -797,7 +826,7 @@ async function run() {
                     property_name: prop.name,
                     room_name: 'Indisponível (Esgotado)',
                     price: 0,
-                    source_url: prop.source_url.trim(),
+                    source_url: currentUrl,
                     status: 'sold_out',
                 });
             } else {
@@ -811,7 +840,7 @@ async function run() {
                         price: room.price,
                         adults: room.adults,
                         children: room.children,
-                        source_url: prop.source_url.trim(),
+                        source_url: currentUrl,
                         status: 'available',
                     });
                 }
