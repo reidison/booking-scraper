@@ -183,6 +183,7 @@ async function updateSupabaseDirectly(updates) {
     const now = new Date().toISOString();
     let changesCount = 0;
     const notFound = [];
+    const historyInserts = [];
 
     // Agrupar atualizações recebidas por propriedade
     const updatesByProp = new Map();
@@ -225,28 +226,31 @@ async function updateSupabaseDirectly(updates) {
         const isPropSoldOut = propUpdates.every(u => u.status === 'sold_out' || u.price <= 0);
 
         if (isPropSoldOut) {
-            // Excluir todos os quartos existentes (esgotados)
-            for (const room of propRooms) {
-                await supabaseAdmin.from('rooms').delete().eq('id', room.id);
-                await supabaseAdmin.from('price_history').insert({
-                    property_id: propId,
-                    room_id: null,
-                    room_name: room.name + " (Excluído - Esgotado)",
-                    old_price: room.price,
-                    new_price: 0,
-                    source_url: latestSourceUrl,
-                    checked_at: now,
-                    verified_at: now,
-                });
-                changesCount++;
-                console.log(`   🗑️ ${prop.name} / ${room.name}: esgotado e excluído (era R$ ${room.price})`);
+            // Excluir todos os quartos existentes (esgotados) em lote
+            if (propRooms.length > 0) {
+                const roomIdsToDelete = propRooms.map(r => r.id);
+                await supabaseAdmin.from('rooms').delete().in('id', roomIdsToDelete);
+                for (const room of propRooms) {
+                    historyInserts.push({
+                        property_id: propId,
+                        room_id: null,
+                        room_name: room.name + " (Excluído - Esgotado)",
+                        old_price: room.price,
+                        new_price: 0,
+                        source_url: latestSourceUrl,
+                        checked_at: now,
+                        verified_at: now,
+                    });
+                    changesCount++;
+                    console.log(`   🗑️ ${prop.name} / ${room.name}: esgotado e excluído (era R$ ${room.price})`);
+                }
             }
             
             // Zera preço base da propriedade e atualiza URL
             if (prop.price > 0 || prop.source_url !== latestSourceUrl) {
                 await supabaseAdmin.from('properties').update({ price: 0, source_url: latestSourceUrl }).eq('id', propId);
                 if (prop.price > 0) {
-                    await supabaseAdmin.from('price_history').insert({
+                    historyInserts.push({
                         property_id: propId,
                         room_id: null,
                         room_name: 'Indisponível (Esgotado)',
@@ -306,7 +310,7 @@ async function updateSupabaseDirectly(updates) {
 
                 if (matchedRoom.price !== price || matchedRoom.adults !== adults || matchedRoom.children !== children) {
                     await supabaseAdmin.from('rooms').update(updateData).eq('id', matchedRoom.id);
-                    await supabaseAdmin.from('price_history').insert({
+                    historyInserts.push({
                         property_id: propId,
                         room_id: matchedRoom.id,
                         room_name: matchedRoom.name,
@@ -336,7 +340,7 @@ async function updateSupabaseDirectly(updates) {
                     updatedRoomIds.add(newRoom.id);
                     activeRoomPrices.push(price);
 
-                    await supabaseAdmin.from('price_history').insert({
+                    historyInserts.push({
                         property_id: propId,
                         room_id: newRoom.id,
                         room_name: room_name || 'Quarto Padrão',
@@ -352,11 +356,13 @@ async function updateSupabaseDirectly(updates) {
             }
         }
 
-        // Excluir quartos que NÃO vieram na raspagem (quartos obsoletos/desatualizados)
-        for (const room of propRooms) {
-            if (!updatedRoomIds.has(room.id)) {
-                await supabaseAdmin.from('rooms').delete().eq('id', room.id);
-                await supabaseAdmin.from('price_history').insert({
+        // Excluir quartos que NÃO vieram na raspagem (quartos obsoletos/desatualizados) em lote
+        const obsoleteRooms = propRooms.filter(room => !updatedRoomIds.has(room.id));
+        if (obsoleteRooms.length > 0) {
+            const obsoleteIds = obsoleteRooms.map(r => r.id);
+            await supabaseAdmin.from('rooms').delete().in('id', obsoleteIds);
+            for (const room of obsoleteRooms) {
+                historyInserts.push({
                     property_id: propId,
                     room_id: null,
                     room_name: room.name + ' (Excluído)',
@@ -376,7 +382,7 @@ async function updateSupabaseDirectly(updates) {
         if (prop.price !== minPrice || prop.source_url !== latestSourceUrl) {
             await supabaseAdmin.from('properties').update({ price: minPrice, source_url: latestSourceUrl }).eq('id', propId);
             if (prop.price !== minPrice) {
-                await supabaseAdmin.from('price_history').insert({
+                historyInserts.push({
                     property_id: propId,
                     room_id: null,
                     room_name: minPrice > 0 ? 'Preço Base Atualizado' : 'Indisponível (Esgotado)',
@@ -389,6 +395,14 @@ async function updateSupabaseDirectly(updates) {
                 changesCount++;
             }
             console.log(`   🏨 ${prop.name}: preço base/URL atualizado(s) no Supabase (menor preço: R$ ${minPrice})`);
+        }
+    }
+
+    // Gravação dos históricos acumulados em um único comando insert em lote
+    if (historyInserts.length > 0) {
+        const { error } = await supabaseAdmin.from('price_history').insert(historyInserts);
+        if (error) {
+            console.error('❌ Erro ao gravar histórico de preços em lote:', error.message);
         }
     }
 
