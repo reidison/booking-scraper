@@ -483,8 +483,24 @@ async function run() {
             }
             urlToScrape.searchParams.set('lang', 'pt-br');
             
-            // Definir checkin e checkout (prioridade para o original)
+            // Definir checkin e checkout (prioridade para o original se for data futura)
+            let useOriginal = false;
             if (originalCheckin && originalCheckout) {
+                try {
+                    const originalCheckinDate = new Date(originalCheckin + 'T00:00:00');
+                    const todayMidnight = new Date();
+                    todayMidnight.setHours(0, 0, 0, 0);
+                    if (originalCheckinDate >= todayMidnight) {
+                        useOriginal = true;
+                    } else {
+                        console.log(`   ⚠️  Datas do link original estão no passado (${originalCheckin}). Usando datas dinâmicas.`);
+                    }
+                } catch (_) {
+                    useOriginal = false;
+                }
+            }
+
+            if (useOriginal && originalCheckin && originalCheckout) {
                 urlToScrape.searchParams.set('checkin', originalCheckin);
                 urlToScrape.searchParams.set('checkout', originalCheckout);
             } else {
