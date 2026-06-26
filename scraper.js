@@ -696,8 +696,14 @@ async function run() {
                             const srEl = occupancyEl.querySelector('.sr-only, .visually-hidden');
                             const textToSearch = (srEl ? srEl.innerText : occupancyEl.innerText || occupancyEl.getAttribute('title') || '').toLowerCase();
                             
-                            const adultMatch = textToSearch.match(/(\d+)\s*(?:adulto|pessoa|guest|hospede|adult|pax)/i);
-                            const childMatch = textToSearch.match(/(\d+)\s*(?:crianca|child|menor)/i);
+                            let adultMatch = textToSearch.match(/(\d+)\s*(?:adulto|pessoa|guest|hospede|adult|pax)/i);
+                            if (!adultMatch) {
+                                adultMatch = textToSearch.match(/(?:adulto|pessoa|guest|hospede|adult|pax)s?\s*[:\-\s]\s*(\d+)/i);
+                            }
+                            let childMatch = textToSearch.match(/(\d+)\s*(?:crianca|child|menor)/i);
+                            if (!childMatch) {
+                                childMatch = textToSearch.match(/(?:crianca|child|menor)es?\s*[:\-\s]\s*(\d+)/i);
+                            }
 
                             if (icons.length > 0) {
                                 adults = icons.length;
@@ -785,6 +791,18 @@ async function run() {
                                     adults: adults,
                                     children: children
                                 });
+                            }
+                        }
+                    }
+
+// Se houver dupla oferta (1 adulto e 2 adultos) para o mesmo nome de quarto,
+                    // prioriza unicamente a opção de 2 adultos (e remove a de 1 adulto)
+                    for (const key of Array.from(roomMap.keys())) {
+                        if (key.endsWith('_1_0')) {
+                            const roomBaseName = key.slice(0, -4);
+                            const doubleKey = `${roomBaseName}_2_0`;
+                            if (roomMap.has(doubleKey)) {
+                                roomMap.delete(key);
                             }
                         }
                     }
