@@ -416,6 +416,22 @@ async function updateSupabaseDirectly(updates) {
         }
     }
 
+    // Limpeza de histórico antigo para economizar espaço (mantém as últimas 24 horas)
+    try {
+        const cutOffTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { error: cleanErr } = await supabaseAdmin
+            .from('price_history')
+            .delete()
+            .lt('checked_at', cutOffTime);
+        if (cleanErr) {
+            console.error('❌ Erro ao limpar histórico antigo:', cleanErr.message);
+        } else {
+            console.log('   🧹 Histórico com mais de 24 horas limpo com sucesso.');
+        }
+    } catch (err) {
+        console.error('❌ Erro na rotina de limpeza:', err.message);
+    }
+
     console.log(`\n✅ ${changesCount} alteração(ões) gravada(s) diretamente no Supabase.`);
 }
 
