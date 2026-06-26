@@ -246,23 +246,28 @@ async function updateSupabaseDirectly(updates) {
                 }
             }
             
-            // Zera preço base da propriedade e atualiza URL
-            if (prop.price > 0 || prop.source_url !== latestSourceUrl) {
-                await supabaseAdmin.from('properties').update({ price: 0, source_url: latestSourceUrl }).eq('id', propId);
-                if (prop.price > 0) {
-                    historyInserts.push({
-                        property_id: propId,
-                        room_id: null,
-                        room_name: 'Indisponível (Esgotado)',
-                        old_price: prop.price,
-                        new_price: 0,
-                        source_url: latestSourceUrl,
-                        checked_at: now,
-                        verified_at: now,
-                    });
-                    changesCount++;
-                }
+            // Zera preço base da propriedade, atualiza URL e o timestamp de verificação (updated_at)
+            await supabaseAdmin.from('properties').update({ 
+                price: 0, 
+                source_url: latestSourceUrl,
+                updated_at: now 
+            }).eq('id', propId);
+            
+            if (prop.price > 0) {
+                historyInserts.push({
+                    property_id: propId,
+                    room_id: null,
+                    room_name: 'Indisponível (Esgotado)',
+                    old_price: prop.price,
+                    new_price: 0,
+                    source_url: latestSourceUrl,
+                    checked_at: now,
+                    verified_at: now,
+                });
+                changesCount++;
                 console.log(`   🚫 ${prop.name}: esgotado (era R$ ${prop.price})`);
+            } else {
+                console.log(`   🚫 ${prop.name}: esgotado (sem alteração de preço, timestamp atualizado)`);
             }
             continue;
         }
@@ -377,24 +382,29 @@ async function updateSupabaseDirectly(updates) {
             }
         }
 
-        // Atualiza preço base da propriedade com o menor preço ativo da rodada e atualiza URL
+        // Atualiza preço base da propriedade com o menor preço ativo da rodada, URL e o timestamp de verificação (updated_at)
         const minPrice = activeRoomPrices.length > 0 ? Math.min(...activeRoomPrices) : 0;
-        if (prop.price !== minPrice || prop.source_url !== latestSourceUrl) {
-            await supabaseAdmin.from('properties').update({ price: minPrice, source_url: latestSourceUrl }).eq('id', propId);
-            if (prop.price !== minPrice) {
-                historyInserts.push({
-                    property_id: propId,
-                    room_id: null,
-                    room_name: minPrice > 0 ? 'Preço Base Atualizado' : 'Indisponível (Esgotado)',
-                    old_price: prop.price,
-                    new_price: minPrice,
-                    source_url: latestSourceUrl,
-                    checked_at: now,
-                    verified_at: now,
-                });
-                changesCount++;
-            }
-            console.log(`   🏨 ${prop.name}: preço base/URL atualizado(s) no Supabase (menor preço: R$ ${minPrice})`);
+        await supabaseAdmin.from('properties').update({ 
+            price: minPrice, 
+            source_url: latestSourceUrl,
+            updated_at: now 
+        }).eq('id', propId);
+
+        if (prop.price !== minPrice) {
+            historyInserts.push({
+                property_id: propId,
+                room_id: null,
+                room_name: minPrice > 0 ? 'Preço Base Atualizado' : 'Indisponível (Esgotado)',
+                old_price: prop.price,
+                new_price: minPrice,
+                source_url: latestSourceUrl,
+                checked_at: now,
+                verified_at: now,
+            });
+            changesCount++;
+            console.log(`   🏨 ${prop.name}: preço base atualizado no Supabase (R$ ${prop.price} → R$ ${minPrice})`);
+        } else {
+            console.log(`   🏨 ${prop.name}: preço base sem alteração (R$ ${minPrice}) - timestamp de verificação atualizado.`);
         }
     }
 
