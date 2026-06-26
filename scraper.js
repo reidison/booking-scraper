@@ -672,29 +672,30 @@ async function run() {
                         );
 
                         if (occupancyEl) {
-                            // Try from attributes
-                            const dataOcc = occupancyEl.getAttribute('data-occupancy') || 
-                                             occupancyEl.getAttribute('data-capacity') ||
-                                             occupancyEl.getAttribute('data-max-occupancy');
-                            if (dataOcc && !isNaN(parseInt(dataOcc))) {
-                                adults = parseInt(dataOcc);
-                            } else {
-                                // Try screen reader text
-                                const srEl = occupancyEl.querySelector('.sr-only, .visually-hidden');
-                                const textToSearch = (srEl ? srEl.innerText : occupancyEl.innerText || occupancyEl.getAttribute('title') || '').toLowerCase();
-                                
-                                const adultMatch = textToSearch.match(/(\d+)\s*(?:adulto|pessoa|guest|hospede|adult|pax)/i);
-                                const childMatch = textToSearch.match(/(\d+)\s*(?:crianca|child|menor)/i);
-                                
-                                if (adultMatch) adults = parseInt(adultMatch[1]);
-                                if (childMatch) children = parseInt(childMatch[1]);
+                            // 1. Tenta contar os ícones de pessoas primeiro para obter a capacidade real da linha/tarifa
+                            const icons = occupancyEl.querySelectorAll('.bui-icon--occupancy, i[class*="user"], svg[class*="user"], .occupancy-icon');
+                            const childIcons = occupancyEl.querySelectorAll('.bui-icon--child, i[class*="child"], svg[class*="child"], .child-icon');
+                            
+                            // 2. Tenta ler texto de tela ou texto visível que descreve a ocupação real da linha
+                            const srEl = occupancyEl.querySelector('.sr-only, .visually-hidden');
+                            const textToSearch = (srEl ? srEl.innerText : occupancyEl.innerText || occupancyEl.getAttribute('title') || '').toLowerCase();
+                            
+                            const adultMatch = textToSearch.match(/(\d+)\s*(?:adulto|pessoa|guest|hospede|adult|pax)/i);
+                            const childMatch = textToSearch.match(/(\d+)\s*(?:crianca|child|menor)/i);
 
-                                if (!adultMatch) {
-                                    // Count icons
-                                    const icons = occupancyEl.querySelectorAll('.bui-icon--occupancy, i[class*="user"], svg[class*="user"], .occupancy-icon');
-                                    if (icons.length > 0) {
-                                        adults = icons.length;
-                                    }
+                            if (icons.length > 0) {
+                                adults = icons.length;
+                                children = childIcons.length;
+                            } else if (adultMatch) {
+                                adults = parseInt(adultMatch[1]);
+                                if (childMatch) children = parseInt(childMatch[1]);
+                            } else {
+                                // Fallback para atributos se não houver ícones nem texto específico de ocupação
+                                const dataOcc = occupancyEl.getAttribute('data-occupancy') || 
+                                                 occupancyEl.getAttribute('data-capacity') ||
+                                                 occupancyEl.getAttribute('data-max-occupancy');
+                                if (dataOcc && !isNaN(parseInt(dataOcc))) {
+                                    adults = parseInt(dataOcc);
                                 }
                             }
                         } else {
