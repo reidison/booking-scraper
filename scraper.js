@@ -416,9 +416,9 @@ async function updateSupabaseDirectly(updates) {
         }
     }
 
-    // Limpeza de histórico antigo para economizar espaço (mantém as últimas 24 horas)
+    // Limpeza de histórico antigo para economizar espaço (mantém apenas a última hora)
     try {
-        const cutOffTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const cutOffTime = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString();
         const { error: cleanErr } = await supabaseAdmin
             .from('price_history')
             .delete()
@@ -426,7 +426,7 @@ async function updateSupabaseDirectly(updates) {
         if (cleanErr) {
             console.error('❌ Erro ao limpar histórico antigo:', cleanErr.message);
         } else {
-            console.log('   🧹 Histórico com mais de 24 horas limpo com sucesso.');
+            console.log('   🧹 Histórico com mais de 1 hora limpo com sucesso.');
         }
     } catch (err) {
         console.error('❌ Erro na rotina de limpeza:', err.message);
@@ -641,11 +641,99 @@ async function run() {
                     return Math.round(priceVal * 100) / 100;
                 };
 
+                // Função para obter o preço de uma linha da tabela de disponibilidade,
+                // priorizando o preço bruto (original/tachado) para ignorar os descontos do programa Genius.
+                const getRowPrice = (row) => {
+                    // 1. Procurar por preços originais/brutos (estão riscados/tachados em del ou s)
+                    const originalSelectors = [
+                        'del',
+                        's',
+                        '.bui-price-display__original',
+                        '[class*="original"]',
+                        '[class*="old"]',
+                        '[class*="strikethrough"]'
+                    ];
+                    
+                    let basePrice = null;
+                    let foundEl = null;
+                    
+                    for (const sel of originalSelectors) {
+                        const els = row.querySelectorAll(sel);
+                        for (const el of els) {
+                            const txt = el.innerText.trim();
+                            const price = parsePriceText(txt);
+                            if (price !== null && !isNaN(price) && price >= 20) {
+                                basePrice = price;
+                                foundEl = el;
+                                break;
+                            }
+                        }
+                        if (basePrice !== null) break;
+                    }
+                    
+                    // 2. Se não houver preço original/bruto tachado, usar seletores de preço comum (sem desconto)
+                    if (basePrice === null) {
+                        const normalSelectors = [
+                            '.bui-price-display__value',
+                            '.prc-box-format__value',
+                            '[data-testid="price-and-discounted-price"]',
+                            '.prco-valign-middle-helper',
+                            'span.prco-inline-block-maker-helper',
+                            '[data-testid="price-display-value"]',
+                            '.prco-text-nowrap-helper'
+                        ];
+                        for (const sel of normalSelectors) {
+                            const els = row.querySelectorAll(sel);
+                            for (const el of els) {
+                                // Ignorar se o elemento estiver dentro de del ou s
+                                let parent = el.parentElement;
+                                let inStrikethrough = false;
+                                while (parent && parent !== row) {
+                                    if (parent.tagName === 'DEL' || parent.tagName === 'S') {
+                                        inStrikethrough = true;
+                                        break;
+                                    }
+                                    parent = parent.parentElement;
+                                }
+                                if (inStrikethrough) continue;
+                                
+                                const txt = el.innerText.trim();
+                                const price = parsePriceText(txt);
+                                if (price !== null && !isNaN(price) && price >= 20) {
+                                    basePrice = price;
+                                    foundEl = el;
+                                    break;
+                                }
+                            }
+                            if (basePrice !== null) break;
+                        }
+                    }
+                    
+                    if (basePrice === null) return null;
+                    
+                    // 3. Adicionar impostos e taxas adicionais, se existirem na célula
+                    let cell = foundEl;
+                    while (cell && cell.parentElement && cell.tagName !== 'TD' && cell !== row) {
+                        const className = (cell.className || '').toString().toLowerCase();
+                        if (className.includes('price') || className.includes('cell') || cell.tagName === 'TR') {
+                            break;
+                        }
+                        cell = cell.parentElement;
+                    }
+                    const cellText = cell ? cell.innerText || '' : '';
+                    const taxMatch = cellText.match(/\+\s*(?:R\$|\$)\s*([\d.,]+)/i);
+                    if (taxMatch) {
+                        const taxStr = taxMatch[1];
+                        const taxPrice = parsePriceText("R$ " + taxStr);
+                        if (taxPrice !== null && !isNaN(taxPrice)) {
+                            return basePrice + taxPrice;
+                        }
+                    }
+                    
+                    return basePrice;
+                };
+
                 // Extrai todos os tipos de quarto com seus preços da tabela de disponibilidade.
-                // A extração é feita ANTES de qualquer checagem de isSoldOut:
-                // se encontrou preços reais na tabela, a propriedade NÃO está esgotada,
-                // independente de textos como "Datas alternativas" ou "Sold out" que podem
-                // aparecer em seções de sugestão da mesma página.
                 const extractAllRooms = () => {
                     const table = document.querySelector('.hprt-table') ||
                                   document.querySelector('[data-testid="availability-table"]') ||
@@ -654,16 +742,6 @@ async function run() {
 
                     const roomMap = new Map(); // key -> { name, price, adults, children }
                     let currentRoomName = null;
-
-                    const priceSelectors = [
-                        '.bui-price-display__value',
-                        '.prc-box-format__value',
-                        '[data-testid="price-and-discounted-price"]',
-                        '.prco-valign-middle-helper',
-                        'span.prco-inline-block-maker-helper',
-                        '[data-testid="price-display-value"]',
-                        '.prco-text-nowrap-helper'
-                    ];
 
                     const rows = table.querySelectorAll('tr');
                     for (const row of rows) {
@@ -688,11 +766,9 @@ async function run() {
                         );
 
                         if (occupancyEl) {
-                            // 1. Tenta contar os ícones de pessoas primeiro para obter a capacidade real da linha/tarifa
                             const icons = occupancyEl.querySelectorAll('.bui-icon--occupancy, i[class*="user"], svg[class*="user"], .occupancy-icon');
                             const childIcons = occupancyEl.querySelectorAll('.bui-icon--child, i[class*="child"], svg[class*="child"], .child-icon');
                             
-                            // 2. Tenta ler texto de tela ou texto visível que descreve a ocupação real da linha
                             const srEl = occupancyEl.querySelector('.sr-only, .visually-hidden');
                             const textToSearch = (srEl ? srEl.innerText : occupancyEl.innerText || occupancyEl.getAttribute('title') || '').toLowerCase();
                             
@@ -712,7 +788,6 @@ async function run() {
                                 adults = parseInt(adultMatch[1]);
                                 if (childMatch) children = parseInt(childMatch[1]);
                             } else {
-                                // Fallback para atributos se não houver ícones nem texto específico de ocupação
                                 const dataOcc = occupancyEl.getAttribute('data-occupancy') || 
                                                  occupancyEl.getAttribute('data-capacity') ||
                                                  occupancyEl.getAttribute('data-max-occupancy');
@@ -721,7 +796,6 @@ async function run() {
                                 }
                             }
                         } else {
-                            // Fallback row text search
                             const textToSearch = row.innerText.toLowerCase();
                             const adultMatch = textToSearch.match(/(\d+)\s*(?:adulto|pessoa|guest|hospede|adult|pax)/i);
                             const childMatch = textToSearch.match(/(\d+)\s*(?:crianca|child|menor)/i);
@@ -730,59 +804,13 @@ async function run() {
                         }
 
                         // 3. Extract price for this row
-                        let rowPrice = null;
-                        let foundPrice = false;
-                        for (const sel of priceSelectors) {
-                            if (foundPrice) break;
-                            const els = row.querySelectorAll(sel);
-                            for (const el of els) {
-                                // Check if inside strike-through elements
-                                let parent = el.parentElement;
-                                let inStrikethrough = false;
-                                while (parent && parent !== row) {
-                                    if (parent.tagName === 'DEL' || parent.tagName === 'S') {
-                                        inStrikethrough = true;
-                                        break;
-                                    }
-                                    parent = parent.parentElement;
-                                }
-                                if (inStrikethrough) continue;
-
-                                const txt = el.innerText.trim();
-                                const price = parsePriceText(txt);
-                                if (price === null || isNaN(price) || price < 20) continue;
-
-                                // Encontra o container da célula de preço para buscar possíveis taxas
-                                let cell = el;
-                                while (cell && cell.parentElement) {
-                                    const className = (cell.className || '').toString().toLowerCase();
-                                    if (cell.tagName === 'TD' || className.includes('price') || className.includes('cell') || cell.tagName === 'TR') {
-                                        break;
-                                    }
-                                    cell = cell.parentElement;
-                                }
-                                const cellText = cell ? cell.innerText || '' : '';
-
-                                // Procura por taxas adicionais como "+ R$ 20 de impostos e taxas"
-                                const taxMatch = cellText.match(/\+\s*(?:R\$|\$)\s*([\d.,]+)/i);
-                                if (taxMatch) {
-                                    const taxStr = taxMatch[1];
-                                    const taxPrice = parsePriceText("R$ " + taxStr);
-                                    if (taxPrice !== null && !isNaN(taxPrice)) {
-                                        rowPrice = price + taxPrice;
-                                    } else {
-                                        rowPrice = price;
-                                    }
-                                } else {
-                                    rowPrice = price;
-                                }
-
-                                foundPrice = true;
-                                break;
-                            }
-                        }
+                        const rowPrice = getRowPrice(row);
 
                         if (rowPrice !== null) {
+                            // Regra Estrita: Filtra para aceitar apenas tarifas de exatamente 2 adultos e 0 crianças
+                            if (adults !== 2 || children !== 0) {
+                                continue;
+                            }
                             const optionKey = `${currentRoomName}_${adults}_${children}`;
                             if (!roomMap.has(optionKey) || rowPrice < roomMap.get(optionKey).price) {
                                 roomMap.set(optionKey, {
@@ -795,7 +823,7 @@ async function run() {
                         }
                     }
 
-// Se houver dupla oferta (1 adulto e 2 adultos) para o mesmo nome de quarto,
+                    // Se houver dupla oferta (1 adulto e 2 adultos) para o mesmo nome de quarto,
                     // prioriza unicamente a opção de 2 adultos (e remove a de 1 adulto)
                     for (const key of Array.from(roomMap.keys())) {
                         if (key.endsWith('_1_0')) {
@@ -812,48 +840,18 @@ async function run() {
 
                 const rooms = extractAllRooms();
 
-                // Extração do menor preço da tabela (fallback)
+                // Extração do menor preço da tabela (fallback) usando a lógica unificada do getRowPrice
                 let lowestTablePrice = null;
                 const table = document.querySelector('.hprt-table') ||
                               document.querySelector('[data-testid="availability-table"]') ||
                               document.querySelector('table[data-block="availability_table"]');
                 if (table) {
-                    const priceEls = table.querySelectorAll('.bui-price-display__value, .prc-box-format__value, [data-testid="price-and-discounted-price"], .prco-valign-middle-helper, span.prco-inline-block-maker-helper, [data-testid="price-display-value"], .prco-text-nowrap-helper');
-                    for (const el of priceEls) {
-                        let parent = el.parentElement;
-                        let inStrikethrough = false;
-                        while (parent && parent !== table) {
-                            if (parent.tagName === 'DEL' || parent.tagName === 'S') {
-                                inStrikethrough = true;
-                                break;
-                            }
-                            parent = parent.parentElement;
-                        }
-                        if (inStrikethrough) continue;
-
-                        const price = parsePriceText(el.innerText);
+                    const rows = table.querySelectorAll('tr');
+                    for (const row of rows) {
+                        const price = getRowPrice(row);
                         if (price !== null && !isNaN(price) && price >= 20) {
-                            let finalPrice = price;
-                            let cell = el;
-                            while (cell && cell.parentElement && cell !== table) {
-                                const className = (cell.className || '').toString().toLowerCase();
-                                if (cell.tagName === 'TD' || className.includes('price') || className.includes('cell') || cell.tagName === 'TR') {
-                                    break;
-                                }
-                                cell = cell.parentElement;
-                            }
-                            const cellText = cell ? cell.innerText || '' : '';
-                            const taxMatch = cellText.match(/\+\s*(?:R\$|\$)\s*([\d.,]+)/i);
-                            if (taxMatch) {
-                                const taxStr = taxMatch[1];
-                                const taxPrice = parsePriceText("R$ " + taxStr);
-                                if (taxPrice !== null && !isNaN(taxPrice)) {
-                                    finalPrice = price + taxPrice;
-                                }
-                            }
-
-                            if (lowestTablePrice === null || finalPrice < lowestTablePrice) {
-                                lowestTablePrice = finalPrice;
+                            if (lowestTablePrice === null || price < lowestTablePrice) {
+                                lowestTablePrice = price;
                             }
                         }
                     }
