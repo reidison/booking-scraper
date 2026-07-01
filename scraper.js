@@ -924,17 +924,18 @@ async function run() {
                                                 }
                                                 await new Promise(r => setTimeout(r, 100));
                                             }
-                                            if (lightbox) {
-                                                const lightboxImgs = Array.from(lightbox.querySelectorAll('img'));
-                                                roomImages = lightboxImgs.map(img => {
-                                                    const src = img.getAttribute('src') || img.getAttribute('data-lazy') || '';
-                                                    return src.replace('/square60/', '/max1024x768/').replace('/max500/', '/max1024x768/');
+                                            if (modal) {
+                                                const modalImgs = Array.from(modal.querySelectorAll('img'));
+                                                roomImages = modalImgs.map(img => {
+                                                    const src = img.getAttribute('src') || img.getAttribute('data-lazy') || img.getAttribute('data-highres') || img.srcset || '';
+                                                    return src.split(',')[0].trim().split(' ')[0]
+                                                             .replace('/square60/', '/max1024x768/')
+                                                             .replace('/max500/', '/max1024x768/');
                                                 }).filter(src => src.startsWith('http'));
                                             }
-                                            // Fechar lightbox
-                                            const closeBtn = document.querySelector('.lightbox_close_button, a[href*="#close-lightbox"], [aria-label="Close"]');
-                                            if (closeBtn) closeBtn.click();
-                                            await new Promise(r => setTimeout(r, 200));
+                                            // Fechar modal
+                                            const closeBtn = (modal || document).querySelector('button[aria-label], button.bui-button--light, button');
+                                            if (closeBtn) { closeBtn.click(); await new Promise(r => setTimeout(r, 300)); }
                                         } catch (e) {
                                             // Silencioso
                                         }
