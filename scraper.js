@@ -528,10 +528,17 @@ async function run() {
     console.log('══════════════════════════════════════════════════════════\n');
 
     // 1) Buscar propriedades (leitura pública)
-    const properties = await fetchProperties();
+    let properties = await fetchProperties();
+
+    const propFilterIdx = process.argv.indexOf('--property');
+    if (propFilterIdx !== -1 && process.argv[propFilterIdx + 1]) {
+        const filterVal = process.argv[propFilterIdx + 1].toLowerCase();
+        properties = properties.filter(p => p.name.toLowerCase().includes(filterVal));
+        console.log(`   🔍 Filtrando propriedades por: "${process.argv[propFilterIdx + 1]}" (restante: ${properties.length})`);
+    }
 
     if (properties.length === 0) {
-        console.log('⚠️  Nenhuma propriedade com link Booking encontrada.');
+        console.log('⚠️  Nenhuma propriedade correspondente encontrada.');
         return;
     }
 
