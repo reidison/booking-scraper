@@ -907,7 +907,8 @@ async function run() {
 
                                 // 2. Se não achou imagens inline, tenta abrir o lightbox clicando no link
                                 if (roomImages.length === 0) {
-                                    const trigger = roomCell.querySelector('a, [role="button"], button');
+                                    const trigger = roomCell.querySelector('a.hprt-roomtype-link, a[data-testid="rt-name-link"]') ||
+                                                    roomCell.querySelector('a:not(.hprt-roomtype-scroll-target), [role="button"], button');
                                     if (trigger) {
                                         try {
                                             trigger.scrollIntoView({ block: 'center' });
