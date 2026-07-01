@@ -347,7 +347,7 @@ async function updateSupabaseDirectly(updates) {
         const activeRoomPrices = [];
 
         for (const update of propUpdates) {
-            const { room_name, price, adults, children, source_url } = update;
+            const { room_name, price, adults, children, source_url, images } = update;
             if (price <= 0 || update.status === 'sold_out') continue;
 
             const normalizedRoom = normalize(room_name || 'geral');
@@ -382,8 +382,9 @@ async function updateSupabaseDirectly(updates) {
                 const updateData = { price };
                 if (adults !== undefined) updateData.adults = adults;
                 if (children !== undefined) updateData.children = children;
+                if (images && images.length > 0) updateData.images = images;
 
-                if (matchedRoom.price !== price || matchedRoom.adults !== adults || matchedRoom.children !== children) {
+                if (matchedRoom.price !== price || matchedRoom.adults !== adults || matchedRoom.children !== children || (images && images.length > 0)) {
                     await supabaseAdmin.from('rooms').update(updateData).eq('id', matchedRoom.id);
                     historyInserts.push({
                         property_id: propId,
@@ -408,7 +409,8 @@ async function updateSupabaseDirectly(updates) {
                     price,
                     adults: adults ?? 2,
                     children: children ?? 0,
-                    available: 1
+                    available: 1,
+                    images: images || null
                 }).select('id').single();
 
                 if (newRoom) {
@@ -672,7 +674,7 @@ async function run() {
             await sleep(1000);
 
             console.log('   🔍 Extraindo dados de preço...');
-            const data = await page.evaluate(() => {
+            const data = await page.evaluate(async () => {
 
                 // Função de parser de preço robusta rodando dentro do navegador para páginas em Pt-Br (BRL)
                 const parsePriceText = (text) => {
@@ -803,14 +805,13 @@ async function run() {
                     return basePrice;
                 };
 
-                // Extrai todos os tipos de quarto com seus preços da tabela de disponibilidade.
-                const extractAllRooms = () => {
+                const extractAllRooms = async () => {
                     const table = document.querySelector('.hprt-table') ||
                                   document.querySelector('[data-testid="availability-table"]') ||
                                   document.querySelector('table[data-block="availability_table"]');
                     if (!table) return [];
 
-                    const roomMap = new Map(); // key -> { name, price, adults, children }
+                    const roomMap = new Map(); // key -> { name, price, adults, children, images }
                     let currentRoomName = null;
 
                     const rows = table.querySelectorAll('tr');
@@ -881,13 +882,59 @@ async function run() {
                             if (adults !== 2 || children !== 0) {
                                 continue;
                             }
+
+                            // Extrair imagens do quarto (tenta inline, se vazio tenta clicar no lightbox)
+                            let roomImages = [];
+                            const roomCell = roomNameEl.closest('td') || roomNameEl.closest('th') || roomNameEl.parentElement;
+                            if (roomCell) {
+                                // 1. Tenta pegar imagens inline no TD/TH
+                                const inlineImgs = Array.from(roomCell.querySelectorAll('img'));
+                                roomImages = inlineImgs.map(img => {
+                                    const src = img.getAttribute('src') || img.getAttribute('data-lazy') || img.getAttribute('data-highres') || '';
+                                    return src.replace('/square60/', '/max1024x768/').replace('/max500/', '/max1024x768/');
+                                }).filter(src => src.startsWith('http'));
+
+                                // 2. Se não achou imagens inline, tenta abrir o lightbox clicando no link
+                                if (roomImages.length === 0) {
+                                    const trigger = roomCell.querySelector('a, [role="button"], button');
+                                    if (trigger) {
+                                        try {
+                                            trigger.click();
+                                            // Esperar carregar o lightbox (máx 1.5s)
+                                            let lightbox = null;
+                                            for (let w = 0; w < 15; w++) {
+                                                lightbox = document.querySelector('.hp_rt_lightbox_content, .hp-rt-lightbox-content, [class*="lightbox_content"]');
+                                                if (lightbox && lightbox.querySelectorAll('img').length > 0) {
+                                                    break;
+                                                }
+                                                await new Promise(r => setTimeout(r, 100));
+                                            }
+                                            if (lightbox) {
+                                                const lightboxImgs = Array.from(lightbox.querySelectorAll('img'));
+                                                roomImages = lightboxImgs.map(img => {
+                                                    const src = img.getAttribute('src') || img.getAttribute('data-lazy') || '';
+                                                    return src.replace('/square60/', '/max1024x768/').replace('/max500/', '/max1024x768/');
+                                                }).filter(src => src.startsWith('http'));
+                                            }
+                                            // Fechar lightbox
+                                            const closeBtn = document.querySelector('.lightbox_close_button, a[href*="#close-lightbox"], [aria-label="Close"]');
+                                            if (closeBtn) closeBtn.click();
+                                            await new Promise(r => setTimeout(r, 200));
+                                        } catch (e) {
+                                            // Silencioso
+                                        }
+                                    }
+                                }
+                            }
+
                             const optionKey = `${currentRoomName}_${adults}_${children}`;
                             if (!roomMap.has(optionKey) || rowPrice < roomMap.get(optionKey).price) {
                                 roomMap.set(optionKey, {
                                     name: currentRoomName,
                                     price: rowPrice,
                                     adults: adults,
-                                    children: children
+                                    children: children,
+                                    images: roomImages
                                 });
                             }
                         }
@@ -908,7 +955,7 @@ async function run() {
                     return Array.from(roomMap.values()).sort((a, b) => a.price - b.price);
                 };
 
-                const rooms = extractAllRooms();
+                const rooms = await extractAllRooms();
 
                 // Extração do menor preço da tabela (fallback) usando a lógica unificada do getRowPrice
                 let lowestTablePrice = null;
@@ -985,6 +1032,7 @@ async function run() {
                         children: room.children,
                         source_url: currentUrl,
                         status: 'available',
+                        images: room.images || null,
                     });
                 }
             }
