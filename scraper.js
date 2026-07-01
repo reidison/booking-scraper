@@ -994,71 +994,104 @@ async function run() {
 
             const { rooms, lowestTablePrice, isSoldOut } = data;
 
-            // ── Extração de imagens via Puppeteer nativo (para quartos sem imagem inline) ──
-            const seenRoomNames = new Set();
-            for (const room of rooms) {
-                if (room.images && room.images.length > 0) continue; // já tem imagens
-                if (room.triggerIdx < 0) continue; // sem trigger disponível
-                if (seenRoomNames.has(room.name)) continue; // evita clicar múltiplas vezes no mesmo quarto
-                seenRoomNames.add(room.name);
+            // ── Extração de imagens via Puppeteer nativo (match por texto do quarto) ──
+            const roomsNeedingImages = rooms.filter(r => !r.images || r.images.length === 0);
+            if (roomsNeedingImages.length > 0) {
+                // Pegar todos os links de nome de quarto visíveis na página
+                const roomLinkTexts = await page.evaluate(() => {
+                    const selectors = [
+                        'a[data-testid="rt-name-link"]',
+                        'a.hprt-roomtype-link',
+                        '.hprt-roomtype-link',
+                        'td[class*="roomtype"] a',
+                        'th[class*="roomtype"] a',
+                        '[data-testid="room-type-name"] a',
+                        '[data-block="room_type"] a',
+                    ].join(', ');
+                    return Array.from(document.querySelectorAll(selectors)).map((el, i) => ({
+                        idx: i,
+                        text: (el.innerText || el.textContent || '').trim(),
+                    }));
+                });
 
-                try {
-                    // Selecionar o link pelo índice (nth-of-type via evaluate)
-                    await page.evaluate((idx) => {
-                        const links = Array.from(document.querySelectorAll('a[data-testid="rt-name-link"], a.hprt-roomtype-link'));
-                        const el = links[idx];
-                        if (el) el.scrollIntoView({ block: 'center' });
-                    }, room.triggerIdx);
-                    await new Promise(r => setTimeout(r, 400));
+                const normalize = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 
-                    await page.evaluate((idx) => {
-                        const links = Array.from(document.querySelectorAll('a[data-testid="rt-name-link"], a.hprt-roomtype-link'));
-                        const el = links[idx];
-                        if (el) el.click();
-                    }, room.triggerIdx);
+                for (const room of roomsNeedingImages) {
+                    const normRoom = normalize(room.name);
+                    const match = roomLinkTexts.find(l => normalize(l.text) === normRoom) ||
+                                  roomLinkTexts.find(l => normalize(l.text).includes(normRoom) || normRoom.includes(normalize(l.text)));
+                    if (!match) continue;
 
-                    // Aguardar o modal aparecer com imagens (máx 5s)
-                    let modalFound = false;
-                    for (let w = 0; w < 50; w++) {
-                        const hasModal = await page.evaluate(() => {
-                            const m = document.querySelector('[role="dialog"][aria-modal="true"]');
-                            return m && m.querySelectorAll('img').length > 0;
-                        });
-                        if (hasModal) { modalFound = true; break; }
-                        await new Promise(r => setTimeout(r, 100));
-                    }
+                    try {
+                        // Scroll + click pelo índice
+                        await page.evaluate((idx, selectors) => {
+                            const el = Array.from(document.querySelectorAll(selectors))[idx];
+                            if (el) { el.scrollIntoView({ block: 'center' }); }
+                        }, match.idx, [
+                            'a[data-testid="rt-name-link"]',
+                            'a.hprt-roomtype-link',
+                            '.hprt-roomtype-link',
+                            'td[class*="roomtype"] a',
+                            'th[class*="roomtype"] a',
+                            '[data-testid="room-type-name"] a',
+                            '[data-block="room_type"] a',
+                        ].join(', '));
+                        await new Promise(r => setTimeout(r, 400));
 
-                    if (modalFound) {
-                        const modalImages = await page.evaluate(() => {
-                            const modal = document.querySelector('[role="dialog"][aria-modal="true"]');
-                            if (!modal) return [];
-                            return Array.from(modal.querySelectorAll('img')).map(img => {
-                                const src = img.getAttribute('src') || img.getAttribute('data-lazy') || img.getAttribute('data-highres') || img.srcset || '';
-                                return src.split(',')[0].trim().split(' ')[0]
-                                         .replace('/square60/', '/max1024x768/')
-                                         .replace('/max500/', '/max1024x768/');
-                            }).filter(s => s.startsWith('http'));
-                        });
-                        if (modalImages.length > 0) {
-                            room.images = modalImages;
-                            console.log(`   🖼️  ${room.name}: ${modalImages.length} foto(s) extraída(s)`);
+                        await page.evaluate((idx, selectors) => {
+                            const el = Array.from(document.querySelectorAll(selectors))[idx];
+                            if (el) el.click();
+                        }, match.idx, [
+                            'a[data-testid="rt-name-link"]',
+                            'a.hprt-roomtype-link',
+                            '.hprt-roomtype-link',
+                            'td[class*="roomtype"] a',
+                            'th[class*="roomtype"] a',
+                            '[data-testid="room-type-name"] a',
+                            '[data-block="room_type"] a',
+                        ].join(', '));
+
+                        // Aguardar modal com imagens (máx 5s)
+                        let modalFound = false;
+                        for (let w = 0; w < 50; w++) {
+                            const has = await page.evaluate(() => {
+                                const m = document.querySelector('[role="dialog"][aria-modal="true"]');
+                                return !!(m && m.querySelectorAll('img').length > 0);
+                            });
+                            if (has) { modalFound = true; break; }
+                            await new Promise(r => setTimeout(r, 100));
                         }
 
-                        // Fechar o modal
-                        await page.evaluate(() => {
-                            const modal = document.querySelector('[role="dialog"][aria-modal="true"]');
-                            if (modal) {
-                                const btn = modal.querySelector('button');
-                                if (btn) btn.click();
+                        if (modalFound) {
+                            const imgs = await page.evaluate(() => {
+                                const modal = document.querySelector('[role="dialog"][aria-modal="true"]');
+                                if (!modal) return [];
+                                return Array.from(modal.querySelectorAll('img')).map(img => {
+                                    const src = img.getAttribute('src') || img.getAttribute('data-lazy') ||
+                                                img.getAttribute('data-highres') || img.srcset || '';
+                                    return src.split(',')[0].trim().split(' ')[0]
+                                        .replace('/square60/', '/max1024x768/')
+                                        .replace('/max500/', '/max1024x768/');
+                                }).filter(s => s.startsWith('http'));
+                            });
+
+                            if (imgs.length > 0) {
+                                room.images = imgs;
+                                console.log(`   🖼️  ${room.name}: ${imgs.length} foto(s) extraída(s)`);
                             }
-                        });
-                        await new Promise(r => setTimeout(r, 500));
-                    }
-                } catch (imgErr) {
-                    // Silencioso — imagem não crítica
+
+                            // Fechar modal
+                            await page.evaluate(() => {
+                                const modal = document.querySelector('[role="dialog"][aria-modal="true"]');
+                                const btn = modal && modal.querySelector('button');
+                                if (btn) btn.click();
+                            });
+                            await new Promise(r => setTimeout(r, 500));
+                        }
+                    } catch (_) { /* imagem não crítica */ }
                 }
             }
-            // ──────────────────────────────────────────────────────────────────────────────
+            // ───────────────────────────────────────────────────────────────────────
 
             if (rooms.length === 0 && lowestTablePrice > 0) {
                 console.log(`   📋 Nenhum quarto estruturado, mas detectado menor preço da tabela: R$ ${lowestTablePrice}`);
