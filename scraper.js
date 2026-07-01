@@ -910,12 +910,15 @@ async function run() {
                                     const trigger = roomCell.querySelector('a, [role="button"], button');
                                     if (trigger) {
                                         try {
+                                            trigger.scrollIntoView({ block: 'center' });
+                                            await new Promise(r => setTimeout(r, 300));
                                             trigger.click();
-                                            // Esperar carregar o lightbox (máx 1.5s)
-                                            let lightbox = null;
-                                            for (let w = 0; w < 15; w++) {
-                                                lightbox = document.querySelector('.hp_rt_lightbox_content, .hp-rt-lightbox-content, [class*="lightbox_content"]');
-                                                if (lightbox && lightbox.querySelectorAll('img').length > 0) {
+                                            
+                                            // Esperar carregar o lightbox (máx 3s)
+                                            let modal = null;
+                                            for (let w = 0; w < 30; w++) {
+                                                modal = document.querySelector('[role="dialog"][aria-modal="true"]');
+                                                if (modal && modal.querySelectorAll('img').length > 0) {
                                                     break;
                                                 }
                                                 await new Promise(r => setTimeout(r, 100));
