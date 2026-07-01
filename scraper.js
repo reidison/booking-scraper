@@ -820,6 +820,7 @@ async function run() {
 
                     const roomMap = new Map(); // key -> { name, price, adults, children, images }
                     let currentRoomName = null;
+                    let currentRoomCell = null;
 
                     const rows = table.querySelectorAll('tr');
                     for (const row of rows) {
@@ -829,7 +830,10 @@ async function run() {
                         );
                         if (roomNameEl) {
                             const txt = roomNameEl.innerText.trim();
-                            if (txt) currentRoomName = txt;
+                            if (txt) {
+                                currentRoomName = txt;
+                                currentRoomCell = roomNameEl.closest('td') || roomNameEl.closest('th') || roomNameEl.parentElement;
+                            }
                         }
 
                         if (!currentRoomName) continue;
@@ -892,7 +896,7 @@ async function run() {
 
                             // Extrair imagens do quarto (tenta inline, se vazio tenta clicar no lightbox)
                             let roomImages = [];
-                            const roomCell = roomNameEl.closest('td') || roomNameEl.closest('th') || roomNameEl.parentElement;
+                            const roomCell = currentRoomCell;
                             if (roomCell) {
                                 // 1. Tenta pegar imagens inline no TD/TH
                                 const inlineImgs = Array.from(roomCell.querySelectorAll('img'));
