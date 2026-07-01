@@ -823,6 +823,8 @@ async function run() {
                     let currentRoomCell = null;
 
                     const rows = table.querySelectorAll('tr');
+                    let roomNameIdx = 0;   // contador para data-scraper-idx
+                    let currentScraperIdx = -1;
                     for (const row of rows) {
                         // 1. Detect room name/category in this row (or inherited from rowspan)
                         const roomNameEl = row.querySelector(
@@ -833,6 +835,11 @@ async function run() {
                             if (txt) {
                                 currentRoomName = txt;
                                 currentRoomCell = roomNameEl.closest('td') || roomNameEl.closest('th') || roomNameEl.parentElement;
+                                // Marcar o elemento com índice único para clique externo via Puppeteer
+                                if (!roomNameEl.hasAttribute('data-scraper-idx')) {
+                                    roomNameEl.setAttribute('data-scraper-idx', String(roomNameIdx++));
+                                }
+                                currentScraperIdx = parseInt(roomNameEl.getAttribute('data-scraper-idx'));
                             }
                         }
 
@@ -894,36 +901,18 @@ async function run() {
                                 continue;
                             }
 
-                            // Registrar trigger selector para extração de imagens fora do evaluate
-                            let triggerSelector = null;
+                            // Verificar imagens inline no TD do quarto (fast-path)
+                            let inlineImages = [];
                             if (currentRoomCell) {
-                                const inlineImgs = Array.from(currentRoomCell.querySelectorAll('img'));
-                                const inlineImages = inlineImgs.map(img => {
+                                inlineImages = Array.from(currentRoomCell.querySelectorAll('img')).map(img => {
                                     const src = img.getAttribute('src') || img.getAttribute('data-lazy') || img.getAttribute('data-highres') || '';
                                     return src.replace('/square60/', '/max1024x768/').replace('/max500/', '/max1024x768/');
                                 }).filter(src => src.startsWith('http'));
-                                if (inlineImages.length > 0) {
-                                    // Imagens já disponíveis inline — armazena diretamente
-                                    const optionKey = `${currentRoomName}_${adults}_${children}`;
-                                    if (!roomMap.has(optionKey) || rowPrice < roomMap.get(optionKey).price) {
-                                        roomMap.set(optionKey, { name: currentRoomName, price: rowPrice, adults, children, images: inlineImages, triggerSelector: null });
-                                    }
-                                    continue;
-                                }
-                                // Sem imagem inline: preparar seletor do trigger para clique externo
-                                const triggerEl = currentRoomCell.querySelector('a[data-testid="rt-name-link"], a.hprt-roomtype-link') ||
-                                                  currentRoomCell.querySelector('a:not(.hprt-roomtype-scroll-target)');
-                                if (triggerEl) {
-                                    // Gerar seletor único por nth-of-type
-                                    const allLinks = Array.from(document.querySelectorAll('a[data-testid="rt-name-link"], a.hprt-roomtype-link'));
-                                    const idx = allLinks.indexOf(triggerEl);
-                                    if (idx >= 0) triggerSelector = `(a[data-testid="rt-name-link"], a.hprt-roomtype-link)[${idx}]`;
-                                }
                             }
 
                             const optionKey = `${currentRoomName}_${adults}_${children}`;
                             if (!roomMap.has(optionKey) || rowPrice < roomMap.get(optionKey).price) {
-                                roomMap.set(optionKey, { name: currentRoomName, price: rowPrice, adults, children, images: [], triggerSelector });
+                                roomMap.set(optionKey, { name: currentRoomName, price: rowPrice, adults, children, images: inlineImages, scraperIdx: currentScraperIdx });
                             }
                         }
                     }
@@ -940,16 +929,8 @@ async function run() {
                         }
                     }
 
-                    // Retornar lista de quartos com triggerIndex
-                    const roomList = Array.from(roomMap.values()).sort((a, b) => a.price - b.price);
-                    // Mapear triggerSelector para índice numérico real
-                    const allTriggers = Array.from(document.querySelectorAll('a[data-testid="rt-name-link"], a.hprt-roomtype-link'));
-                    return roomList.map(r => {
-                        const triggerIdx = r.triggerSelector
-                            ? (() => { const m = r.triggerSelector.match(/\[(\d+)\]/); return m ? parseInt(m[1]) : -1; })()
-                            : -1;
-                        return { ...r, triggerIdx };
-                    });
+                    // Retornar lista de quartos ordenada por preço
+                    return Array.from(roomMap.values()).sort((a, b) => a.price - b.price);
                 };
 
                 const rooms = await extractAllRooms();
@@ -994,102 +975,60 @@ async function run() {
 
             const { rooms, lowestTablePrice, isSoldOut } = data;
 
-            // ── Extração de imagens via Puppeteer nativo (match por texto do quarto) ──
+            // ── Extração de imagens via Puppeteer nativo (usa data-scraper-idx injetado no DOM) ──
             const roomsNeedingImages = rooms.filter(r => !r.images || r.images.length === 0);
-            if (roomsNeedingImages.length > 0) {
-                // Pegar todos os links de nome de quarto visíveis na página
-                const roomLinkTexts = await page.evaluate(() => {
-                    const selectors = [
-                        'a[data-testid="rt-name-link"]',
-                        'a.hprt-roomtype-link',
-                        '.hprt-roomtype-link',
-                        'td[class*="roomtype"] a',
-                        'th[class*="roomtype"] a',
-                        '[data-testid="room-type-name"] a',
-                        '[data-block="room_type"] a',
-                    ].join(', ');
-                    return Array.from(document.querySelectorAll(selectors)).map((el, i) => ({
-                        idx: i,
-                        text: (el.innerText || el.textContent || '').trim(),
-                    }));
-                });
+            const seenScraperIdx = new Set();
+            for (const room of roomsNeedingImages) {
+                if (room.scraperIdx < 0 || seenScraperIdx.has(room.scraperIdx)) continue;
+                seenScraperIdx.add(room.scraperIdx);
 
-                const normalize = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                try {
+                    const triggerHandle = await page.$(`[data-scraper-idx="${room.scraperIdx}"]`);
+                    if (!triggerHandle) continue;
 
-                for (const room of roomsNeedingImages) {
-                    const normRoom = normalize(room.name);
-                    const match = roomLinkTexts.find(l => normalize(l.text) === normRoom) ||
-                                  roomLinkTexts.find(l => normalize(l.text).includes(normRoom) || normRoom.includes(normalize(l.text)));
-                    if (!match) continue;
+                    await page.evaluate(el => el.scrollIntoView({ block: 'center' }), triggerHandle);
+                    await new Promise(r => setTimeout(r, 400));
+                    await triggerHandle.click();
+                    await triggerHandle.dispose();
 
-                    try {
-                        // Scroll + click pelo índice
-                        await page.evaluate((idx, selectors) => {
-                            const el = Array.from(document.querySelectorAll(selectors))[idx];
-                            if (el) { el.scrollIntoView({ block: 'center' }); }
-                        }, match.idx, [
-                            'a[data-testid="rt-name-link"]',
-                            'a.hprt-roomtype-link',
-                            '.hprt-roomtype-link',
-                            'td[class*="roomtype"] a',
-                            'th[class*="roomtype"] a',
-                            '[data-testid="room-type-name"] a',
-                            '[data-block="room_type"] a',
-                        ].join(', '));
-                        await new Promise(r => setTimeout(r, 400));
+                    // Aguardar modal com imagens (máx 5s)
+                    let modalFound = false;
+                    for (let w = 0; w < 50; w++) {
+                        const has = await page.evaluate(() => {
+                            const m = document.querySelector('[role="dialog"][aria-modal="true"]');
+                            return !!(m && m.querySelectorAll('img').length > 0);
+                        });
+                        if (has) { modalFound = true; break; }
+                        await new Promise(r => setTimeout(r, 100));
+                    }
 
-                        await page.evaluate((idx, selectors) => {
-                            const el = Array.from(document.querySelectorAll(selectors))[idx];
-                            if (el) el.click();
-                        }, match.idx, [
-                            'a[data-testid="rt-name-link"]',
-                            'a.hprt-roomtype-link',
-                            '.hprt-roomtype-link',
-                            'td[class*="roomtype"] a',
-                            'th[class*="roomtype"] a',
-                            '[data-testid="room-type-name"] a',
-                            '[data-block="room_type"] a',
-                        ].join(', '));
-
-                        // Aguardar modal com imagens (máx 5s)
-                        let modalFound = false;
-                        for (let w = 0; w < 50; w++) {
-                            const has = await page.evaluate(() => {
-                                const m = document.querySelector('[role="dialog"][aria-modal="true"]');
-                                return !!(m && m.querySelectorAll('img').length > 0);
-                            });
-                            if (has) { modalFound = true; break; }
-                            await new Promise(r => setTimeout(r, 100));
+                    if (modalFound) {
+                        const imgs = await page.evaluate(() => {
+                            const modal = document.querySelector('[role="dialog"][aria-modal="true"]');
+                            if (!modal) return [];
+                            return Array.from(modal.querySelectorAll('img')).map(img => {
+                                const src = img.getAttribute('src') || img.getAttribute('data-lazy') ||
+                                            img.getAttribute('data-highres') || img.srcset || '';
+                                return src.split(',')[0].trim().split(' ')[0]
+                                    .replace('/square60/', '/max1024x768/')
+                                    .replace('/max500/', '/max1024x768/');
+                            }).filter(s => s.startsWith('http'));
+                        });
+                        if (imgs.length > 0) {
+                            room.images = imgs;
+                            console.log(`   🖼️  ${room.name}: ${imgs.length} foto(s) extraída(s)`);
                         }
-
-                        if (modalFound) {
-                            const imgs = await page.evaluate(() => {
-                                const modal = document.querySelector('[role="dialog"][aria-modal="true"]');
-                                if (!modal) return [];
-                                return Array.from(modal.querySelectorAll('img')).map(img => {
-                                    const src = img.getAttribute('src') || img.getAttribute('data-lazy') ||
-                                                img.getAttribute('data-highres') || img.srcset || '';
-                                    return src.split(',')[0].trim().split(' ')[0]
-                                        .replace('/square60/', '/max1024x768/')
-                                        .replace('/max500/', '/max1024x768/');
-                                }).filter(s => s.startsWith('http'));
-                            });
-
-                            if (imgs.length > 0) {
-                                room.images = imgs;
-                                console.log(`   🖼️  ${room.name}: ${imgs.length} foto(s) extraída(s)`);
-                            }
-
-                            // Fechar modal
-                            await page.evaluate(() => {
-                                const modal = document.querySelector('[role="dialog"][aria-modal="true"]');
-                                const btn = modal && modal.querySelector('button');
-                                if (btn) btn.click();
-                            });
-                            await new Promise(r => setTimeout(r, 500));
-                        }
-                    } catch (_) { /* imagem não crítica */ }
-                }
+                        // Fechar modal
+                        await page.evaluate(() => {
+                            const modal = document.querySelector('[role="dialog"][aria-modal="true"]');
+                            const btn = modal && modal.querySelector('button');
+                            if (btn) btn.click();
+                        });
+                        await new Promise(r => setTimeout(r, 500));
+                    } else {
+                        console.log(`   ⚠️  ${room.name}: modal não encontrado após 5s`);
+                    }
+                } catch (_) { /* imagem não crítica */ }
             }
             // ───────────────────────────────────────────────────────────────────────
 
