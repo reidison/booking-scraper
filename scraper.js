@@ -72,6 +72,48 @@ function sleep(ms) {
     return new Promise(r => setTimeout(r, ms));
 }
 
+// Dicionário estático das 28 propriedades conhecidas e seus respectivos links do Booking.com
+const KNOWN_BOOKING_LINKS = {
+    "hotel recanto do ouro": "https://www.booking.com/hotel/br/recanto-da-serra-ouro-preto.pt-br.html?aid=304142",
+    "hotel solar das lajes": "https://www.booking.com/hotel/br/solar-das-lajes.pt-br.html?aid=304142",
+    "hotel pousada minas gerais": "https://www.booking.com/hotel/br/pousada-minas-gerais.pt-br.html?aid=304142",
+    "pousada nossa senhora das merces": "https://www.booking.com/hotel/br/pousada-solar-nossa-senhora-das-merces.pt-br.html?aid=304142",
+    "pousada solar nossa senhora das merces": "https://www.booking.com/hotel/br/pousada-solar-nossa-senhora-das-merces.pt-br.html?aid=304142",
+    "hotel solar de maria": "https://www.booking.com/hotel/br/solar-de-maria.pt-br.html?aid=304142",
+    "pousada solar das gerais": "https://www.booking.com/hotel/br/pertin-da-praca-hostel.pt-br.html?aid=304142",
+    "pousada arcadia mineira": "https://www.booking.com/hotel/br/arcadia-mineira.pt-br.html?aid=304142",
+    "hotel pousada arcadia mineira": "https://www.booking.com/hotel/br/arcadia-mineira.pt-br.html?aid=304142",
+    "pousada solar da inconfidencia": "https://www.booking.com/hotel/br/pousada-toledo.pt-br.html?aid=304142",
+    "pousada do mondego": "https://www.booking.com/hotel/br/pousada-do-mondego.pt-br.html?aid=304142",
+    "casa dos meninos b&b": "https://www.booking.com/hotel/br/casa-dos-meninos-b-amp-b.pt-br.html?aid=304142",
+    "pousada do ouvidor": "https://www.booking.com/hotel/br/pousada-do-ouvidor.pt-br.html?aid=304142",
+    "mirante hotel": "https://www.booking.com/hotel/br/mirante-ouro-preto.pt-br.html?aid=360920",
+    "pousada lacos de minas": "https://www.booking.com/hotel/br/pousada-lacos-de-minas.pt-br.html?aid=360920",
+    "pousada sinha olimpia": "https://www.booking.com/hotel/br/pousada-sinha-olimpia-ouro-preto.pt-br.html?aid=304142",
+    "boroni palace hotel": "https://www.booking.com/hotel/br/boroni-palace.pt-br.html?aid=304142",
+    "hotel priskar": "https://www.booking.com/hotel/br/priskar.pt-br.html?aid=304142",
+    "hotel pousada classica": "https://www.booking.com/hotel/br/pousada-cla-ssica.pt-br.html?aid=304142",
+    "grande hotel de ouro preto": "https://www.booking.com/hotel/br/grande-hotel-de-ouro-preto.pt-br.html?aid=304142",
+    "grande hotel ouro preto": "https://www.booking.com/hotel/br/grande-hotel-de-ouro-preto.pt-br.html?aid=304142",
+    "hotel solar do rosario": "https://www.booking.com/hotel/br/solar-do-rosario.pt-br.html?aid=304142",
+    "pousada casa dos contos": "https://www.booking.com/hotel/br/pousada-casa-dos-contos.pt-br.html?aid=304142",
+    "hotel pousada casa grande": "https://www.booking.com/hotel/br/pousada-casa-grande-ouro-preto.pt-br.html?aid=304142",
+    "pousada dos oficios": "https://www.booking.com/hotel/br/pousada-dos-oficios.pt-br.html?aid=304142",
+    "pousada boutique chico anjo": "https://www.booking.com/hotel/br/pousada-chico-anjo.pt-br.html?aid=304142",
+    "pousada chico anjo": "https://www.booking.com/hotel/br/pousada-chico-anjo.pt-br.html?aid=304142",
+    "chale vila catarina": "https://www.booking.com/hotel/br/pousada-vila-catarina-ouro-preto2.pt-br.html?aid=304142",
+    "hotel luxor": "https://www.booking.com/hotel/br/luxor-ouro-preto-pousada.pt-br.html?aid=304142",
+    "pousada caminhos da liberdade": "https://www.booking.com/hotel/br/pousada-caminhos-da-liberdade.pt-br.html?aid=304142",
+    "caminhos da liberdade pousada": "https://www.booking.com/hotel/br/pousada-caminhos-da-liberdade.pt-br.html?aid=304142",
+    "pousada dos bandeirantes": "https://www.booking.com/hotel/br/pousada-dos-bandeirantes.pt-br.html?aid=304142",
+    "pousada memorias de minas": "https://www.booking.com/hotel/br/pousada-memorias-de-minas.pt-br.html?aid=304142",
+    "pousada inconfidencia mineira": "https://www.booking.com/hotel/br/pousada-inconfidaancia-mineira.pt-br.html?aid=304142",
+    "pouso jardim de assis": "https://www.booking.com/hotel/br/pouso-jardim-de-assis.pt-br.html?aid=304142",
+    "hotel pousada do arcanjo": "https://www.booking.com/hotel/br/arcanjo.pt-br.html?aid=360920",
+    "pousada colonial": "https://www.booking.com/hotel/br/pousada-colonial-ouro-preto.pt-br.html?aid=304142",
+    "vila gale collection ouro preto": "https://www.booking.com/hotel/br/vila-gale-collection-ouro.pt-br.html?aid=304142"
+};
+
 // ══════════════════════════════════════════════════════════════
 //  BUSCAR PROPRIEDADES (leitura pública — sem autenticação)
 // ══════════════════════════════════════════════════════════════
@@ -86,6 +128,34 @@ async function fetchProperties() {
     if (error) {
         console.error('❌ Erro ao buscar propriedades:', error.message);
         return [];
+    }
+
+    const clientToUse = supabaseAdmin || supabase;
+
+    // Auto-linkagem de propriedades com URL ausente ou incorreta
+    for (const p of (properties || [])) {
+        const hasValidUrl = p.source_url && p.source_url.includes('booking.com');
+        if (!hasValidUrl) {
+            const key = normalize(p.name);
+            const knownLink = KNOWN_BOOKING_LINKS[key];
+            if (knownLink) {
+                console.log(`   🔗 Auto-linkagem: Propriedade "${p.name}" sem link válido. Atualizando com link do Booking...`);
+                try {
+                    const { error: updateError } = await clientToUse
+                        .from('properties')
+                        .update({ source_url: knownLink })
+                        .eq('id', p.id);
+                    if (updateError) {
+                        console.warn(`   ⚠️ Falha ao salvar link para "${p.name}":`, updateError.message);
+                    } else {
+                        p.source_url = knownLink;
+                        console.log(`   ✅ Link atualizado no banco para "${p.name}"!`);
+                    }
+                } catch (err) {
+                    console.warn(`   ⚠️ Erro ao salvar link para "${p.name}":`, err.message);
+                }
+            }
+        }
     }
 
     // Filtrar apenas propriedades com URLs válidas do Booking
