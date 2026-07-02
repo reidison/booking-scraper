@@ -998,40 +998,54 @@ async function run() {
                     await triggerHandle.click();
                     await triggerHandle.dispose();
 
-                    // Aguardar modal com imagens (máx 5s)
+                    // Aguardar modal com imagens (máx 5s) usando estratégia de z-index dinâmico
+                    let modalImages = [];
                     let modalFound = false;
                     for (let w = 0; w < 50; w++) {
-                        const has = await page.evaluate(() => {
-                            const m = document.querySelector('[role="dialog"][aria-modal="true"]');
-                            return !!(m && m.querySelectorAll('img').length > 0);
+                        modalImages = await page.evaluate(() => {
+                            const allElements = Array.from(document.querySelectorAll('body *'));
+                            const modals = allElements.filter(el => {
+                                if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE'].includes(el.tagName)) return false;
+                                const style = window.getComputedStyle(el);
+                                const isPositioned = ['fixed', 'absolute'].includes(style.position);
+                                const zIndex = parseInt(style.zIndex, 10);
+                                return isPositioned && zIndex >= 100 && el.offsetHeight > 200 && el.offsetWidth > 200;
+                            });
+                            
+                            if (modals.length === 0) return [];
+                            
+                            for (const modal of modals) {
+                                const imgs = Array.from(modal.querySelectorAll('img')).map(img => {
+                                    return img.getAttribute('src') || img.getAttribute('data-lazy') ||
+                                           img.getAttribute('data-highres') || img.srcset || '';
+                                }).filter(src => src.includes('bstatic.com'))
+                                  .map(src => {
+                                      return src.split(',')[0].trim().split(' ')[0]
+                                          .replace('/square60/', '/max1024x768/')
+                                          .replace('/max500/', '/max1024x768/');
+                                  }).filter(src => src.startsWith('http'));
+                                
+                                if (imgs.length > 0) {
+                                    return Array.from(new Set(imgs));
+                                }
+                            }
+                            return [];
                         });
-                        if (has) { modalFound = true; break; }
+                        
+                        if (modalImages.length > 0) {
+                            modalFound = true;
+                            break;
+                        }
                         await new Promise(r => setTimeout(r, 100));
                     }
-
-                    if (modalFound) {
-                        const imgs = await page.evaluate(() => {
-                            const modal = document.querySelector('[role="dialog"][aria-modal="true"]');
-                            if (!modal) return [];
-                            return Array.from(modal.querySelectorAll('img')).map(img => {
-                                const src = img.getAttribute('src') || img.getAttribute('data-lazy') ||
-                                            img.getAttribute('data-highres') || img.srcset || '';
-                                return src.split(',')[0].trim().split(' ')[0]
-                                    .replace('/square60/', '/max1024x768/')
-                                    .replace('/max500/', '/max1024x768/');
-                            }).filter(s => s.startsWith('http'));
-                        });
-                        if (imgs.length > 0) {
-                            room.images = imgs;
-                            console.log(`   🖼️  ${room.name}: ${imgs.length} foto(s) extraída(s)`);
-                        }
-                        // Fechar modal
-                        await page.evaluate(() => {
-                            const modal = document.querySelector('[role="dialog"][aria-modal="true"]');
-                            const btn = modal && modal.querySelector('button');
-                            if (btn) btn.click();
-                        });
-                        await new Promise(r => setTimeout(r, 500));
+ 
+                    if (modalFound && modalImages.length > 0) {
+                        room.images = modalImages;
+                        console.log(`   🖼️  ${room.name}: ${modalImages.length} foto(s) extraída(s)`);
+                        
+                        // Fechar modal usando a tecla Escape do Puppeteer (super confiável)
+                        await page.keyboard.press('Escape');
+                        await new Promise(r => setTimeout(r, 800));
                     } else {
                         console.log(`   ⚠️  ${room.name}: modal não encontrado após 5s`);
                     }
