@@ -628,6 +628,7 @@ async function run() {
         console.log(`   📅 Pesquisando período: ${urlToScrape.searchParams.get('checkin')} a ${urlToScrape.searchParams.get('checkout')} (${urlToScrape.searchParams.get('group_adults')} adulto(s), ${urlToScrape.searchParams.get('group_children')} criança(s))`);
 
         const page = await browser.newPage();
+        await page.setViewport({ width: 1280, height: 800 });
 
         // User-Agent rotativo
         const userAgents = [
@@ -986,9 +987,21 @@ async function run() {
                     const triggerHandle = await page.$(`[data-scraper-idx="${room.scraperIdx}"]`);
                     if (!triggerHandle) continue;
 
-                    await page.evaluate(el => el.scrollIntoView({ block: 'center' }), triggerHandle);
-                    await new Promise(r => setTimeout(r, 400));
-                    await triggerHandle.click();
+                    await page.evaluate(el => {
+                        document.documentElement.style.scrollBehavior = 'auto';
+                        document.body.style.scrollBehavior = 'auto';
+                        el.scrollIntoView({ block: 'center', behavior: 'instant' });
+                    }, triggerHandle);
+                    await new Promise(r => setTimeout(r, 1000));
+                    
+                    // Clique simulado via MouseEvent (à prova de falhas físicas e sobreposições)
+                    await page.evaluate(el => {
+                        const opts = { bubbles: true, cancelable: true, view: window };
+                        el.dispatchEvent(new MouseEvent('mousedown', opts));
+                        el.dispatchEvent(new MouseEvent('mouseup', opts));
+                        el.dispatchEvent(new MouseEvent('click', opts));
+                    }, triggerHandle);
+                    
                     await triggerHandle.dispose();
 
                     // Aguardar modal com imagens (máx 5s)
