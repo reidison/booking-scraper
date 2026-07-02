@@ -992,16 +992,10 @@ async function run() {
                         document.body.style.scrollBehavior = 'auto';
                         el.scrollIntoView({ block: 'center', behavior: 'instant' });
                     }, triggerHandle);
-                    await new Promise(r => setTimeout(r, 1000));
+                    await new Promise(r => setTimeout(r, 1500));
                     
-                    // Clique simulado via MouseEvent (à prova de falhas físicas e sobreposições)
-                    await page.evaluate(el => {
-                        const opts = { bubbles: true, cancelable: true, view: window };
-                        el.dispatchEvent(new MouseEvent('mousedown', opts));
-                        el.dispatchEvent(new MouseEvent('mouseup', opts));
-                        el.dispatchEvent(new MouseEvent('click', opts));
-                    }, triggerHandle);
-                    
+                    // Clique nativo do Puppeteer (essencial para que o Booking aceite o evento como trusted)
+                    await triggerHandle.click();
                     await triggerHandle.dispose();
 
                     // Aguardar modal com imagens (máx 5s)
