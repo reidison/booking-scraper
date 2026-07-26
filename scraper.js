@@ -740,7 +740,7 @@ async function run() {
                     for (const sel of originalSelectors) {
                         const els = row.querySelectorAll(sel);
                         for (const el of els) {
-                            const txt = el.innerText.trim();
+                            const txt = (el.innerText || el.textContent || '').trim();
                             const price = parsePriceText(txt);
                             if (price !== null && !isNaN(price) && price >= 20) {
                                 basePrice = price;
@@ -777,7 +777,7 @@ async function run() {
                                 }
                                 if (inStrikethrough) continue;
                                 
-                                const txt = el.innerText.trim();
+                                const txt = (el.innerText || el.textContent || '').trim();
                                 const price = parsePriceText(txt);
                                 if (price !== null && !isNaN(price) && price >= 20) {
                                     basePrice = price;
@@ -832,7 +832,7 @@ async function run() {
                             'a[data-testid="rt-name-link"], .hprt-roomtype-link, [data-testid="room-type-name"], [data-testid="roomtype-name"], .hprt-roomtype-icon-link, .room-name, span.rt-room-title, [data-cell-id*="room_type"] a, a[href*="#rd-"]'
                         );
                         if (roomNameEl) {
-                            const txt = roomNameEl.innerText.trim();
+                            const txt = (roomNameEl.innerText || roomNameEl.textContent || '').trim();
                             if (txt) {
                                 currentRoomName = txt;
                                 currentRoomCell = roomNameEl.closest('td') || roomNameEl.closest('th') || roomNameEl.parentElement;
@@ -860,7 +860,7 @@ async function run() {
                             const childIcons = occupancyEl.querySelectorAll('.bui-icon--child, i[class*="child"], svg[class*="child"], .child-icon');
                             
                             const srEl = occupancyEl.querySelector('.sr-only, .visually-hidden');
-                            const textToSearch = (srEl ? srEl.innerText : occupancyEl.innerText || occupancyEl.getAttribute('title') || '').toLowerCase();
+                            const textToSearch = (srEl ? (srEl.innerText || srEl.textContent) : (occupancyEl.innerText || occupancyEl.textContent || occupancyEl.getAttribute('title') || '')).toLowerCase();
                             
                             let adultMatch = textToSearch.match(/(\d+)\s*(?:adulto|pessoa|guest|hospede|adult|pax)/i);
                             if (!adultMatch) {
@@ -886,7 +886,7 @@ async function run() {
                                 }
                             }
                         } else {
-                            const textToSearch = row.innerText.toLowerCase();
+                            const textToSearch = (row.innerText || row.textContent || '').toLowerCase();
                             const adultMatch = textToSearch.match(/(\d+)\s*(?:adulto|pessoa|guest|hospede|adult|pax)/i);
                             const childMatch = textToSearch.match(/(\d+)\s*(?:crianca|child|menor)/i);
                             if (adultMatch) adults = parseInt(adultMatch[1]);
@@ -959,7 +959,7 @@ async function run() {
                 }
 
                 // Nenhum quarto extraído → verificar se é realmente esgotado
-                const bodyText = document.body.innerText;
+                const bodyText = document.body.innerText || document.body.textContent || '';
                 const hasTable = !!table;
                 const isSoldOut = !hasTable ||
                     bodyText.includes('Esta acomodação não tem disponibilidade') ||
@@ -1094,7 +1094,7 @@ async function run() {
             }
 
         } catch (error) {
-            console.error(`   ❌ Erro ao processar ${prop.name}: ${error.message}`);
+            console.error(`   ❌ Erro ao processar ${prop.name}:`, error.stack || error);
         }
 
         await page.close();
