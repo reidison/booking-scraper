@@ -353,8 +353,9 @@ async function updateSupabaseDirectly(updates) {
             const normalizedRoom = normalize(room_name || 'geral');
             let matchedRoom;
 
-            // 1) Match exato de nome normalizado e capacidade
+            // 1) Match exato de nome normalizado e capacidade (evitando duplicar o mesmo quarto físico)
             for (const r of propRooms) {
+                if (updatedRoomIds.has(r.id)) continue;
                 if (normalize(r.name) === normalizedRoom && 
                     (r.adults === undefined || r.adults === adults) && 
                     (r.children === undefined || r.children === children)) {
@@ -365,6 +366,7 @@ async function updateSupabaseDirectly(updates) {
             // 2) Match parcial se não houver exato
             if (!matchedRoom) {
                 for (const r of propRooms) {
+                    if (updatedRoomIds.has(r.id)) continue;
                     const normR = normalize(r.name);
                     if ((normR.includes(normalizedRoom) || normalizedRoom.includes(normR)) &&
                         (r.adults === undefined || r.adults === adults) && 
@@ -590,30 +592,9 @@ async function run() {
             urlToScrape.searchParams.set('selected_currency', 'BRL');
             urlToScrape.searchParams.set('currency', 'BRL');
             
-            // Definir checkin e checkout (prioridade para o original se for data futura)
-            let useOriginal = false;
-            if (originalCheckin && originalCheckout) {
-                try {
-                    const originalCheckinDate = new Date(originalCheckin + 'T00:00:00');
-                    const todayMidnight = new Date();
-                    todayMidnight.setHours(0, 0, 0, 0);
-                    if (originalCheckinDate >= todayMidnight) {
-                        useOriginal = true;
-                    } else {
-                        console.log(`   ⚠️  Datas do link original estão no passado (${originalCheckin}). Usando datas dinâmicas.`);
-                    }
-                } catch (_) {
-                    useOriginal = false;
-                }
-            }
-
-            if (useOriginal && originalCheckin && originalCheckout) {
-                urlToScrape.searchParams.set('checkin', originalCheckin);
-                urlToScrape.searchParams.set('checkout', originalCheckout);
-            } else {
-                urlToScrape.searchParams.set('checkin', checkinDate);
-                urlToScrape.searchParams.set('checkout', checkoutDate);
-            }
+            // Regra Estrita: Sempre raspar o preço do dia (hoje para amanhã), ignorando datas futuras ou passadas da URL
+            urlToScrape.searchParams.set('checkin', checkinDate);
+            urlToScrape.searchParams.set('checkout', checkoutDate);
             
             // Definir quantidade de hóspedes e quartos (prioridade para o original)
             urlToScrape.searchParams.set('group_adults', originalAdults || '2');
@@ -734,35 +715,22 @@ async function run() {
                 // Função para obter o preço de uma linha da tabela de disponibilidade,
                 // priorizando o preço bruto (original/tachado) para ignorar os descontos do programa Genius.
                 const getRowPrice = (row) => {
-                    // 1. Procurar primeiro pelo preço final de venda (ativo, sem estar riscado/tachado)
-                    const normalSelectors = [
-                        '.bui-price-display__value',
-                        '.prc-box-format__value',
-                        '[data-testid="price-and-discounted-price"]',
-                        '.prco-valign-middle-helper',
-                        'span.prco-inline-block-maker-helper',
-                        '[data-testid="price-display-value"]',
-                        '.prco-text-nowrap-helper'
+                    // 1. Procurar por preços originais/brutos (estão riscados/tachados em del ou s) para ignorar tarifas do programa Genius e promoções
+                    const originalSelectors = [
+                        'del',
+                        's',
+                        '.bui-price-display__original',
+                        '[class*="original"]',
+                        '[class*="old"]',
+                        '[class*="strikethrough"]'
                     ];
                     
                     let basePrice = null;
                     let foundEl = null;
                     
-                    for (const sel of normalSelectors) {
+                    for (const sel of originalSelectors) {
                         const els = row.querySelectorAll(sel);
                         for (const el of els) {
-                            // Ignorar se o elemento estiver dentro de del ou s (que são preços originais)
-                            let parent = el.parentElement;
-                            let inStrikethrough = false;
-                            while (parent && parent !== row) {
-                                if (parent.tagName === 'DEL' || parent.tagName === 'S' || parent.classList.contains('bui-price-display__original')) {
-                                    inStrikethrough = true;
-                                    break;
-                                }
-                                parent = parent.parentElement;
-                            }
-                            if (inStrikethrough) continue;
-                            
                             const txt = (el.innerText || el.textContent || '').trim();
                             const price = parsePriceText(txt);
                             if (price !== null && !isNaN(price) && price >= 20) {
@@ -774,19 +742,32 @@ async function run() {
                         if (basePrice !== null) break;
                     }
                     
-                    // 2. Se não houver preço de venda direta comum, usar o preço original/bruto (tachado) como fallback
+                    // 2. Se não houver preço original/bruto tachado, usar seletores de preço comum (sem desconto)
                     if (basePrice === null) {
-                        const originalSelectors = [
-                            'del',
-                            's',
-                            '.bui-price-display__original',
-                            '[class*="original"]',
-                            '[class*="old"]',
-                            '[class*="strikethrough"]'
+                        const normalSelectors = [
+                            '.bui-price-display__value',
+                            '.prc-box-format__value',
+                            '[data-testid="price-and-discounted-price"]',
+                            '.prco-valign-middle-helper',
+                            'span.prco-inline-block-maker-helper',
+                            '[data-testid="price-display-value"]',
+                            '.prco-text-nowrap-helper'
                         ];
-                        for (const sel of originalSelectors) {
+                        for (const sel of normalSelectors) {
                             const els = row.querySelectorAll(sel);
                             for (const el of els) {
+                                // Ignorar se o elemento estiver dentro de del ou s
+                                let parent = el.parentElement;
+                                let inStrikethrough = false;
+                                while (parent && parent !== row) {
+                                    if (parent.tagName === 'DEL' || parent.tagName === 'S') {
+                                        inStrikethrough = true;
+                                        break;
+                                    }
+                                    parent = parent.parentElement;
+                                }
+                                if (inStrikethrough) continue;
+                                
                                 const txt = (el.innerText || el.textContent || '').trim();
                                 const price = parsePriceText(txt);
                                 if (price !== null && !isNaN(price) && price >= 20) {
