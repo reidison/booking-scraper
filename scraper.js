@@ -587,6 +587,8 @@ async function run() {
                 urlToScrape.pathname = p.replace(/\/$/, '') + '.pt-br.html';
             }
             urlToScrape.searchParams.set('lang', 'pt-br');
+            urlToScrape.searchParams.set('selected_currency', 'BRL');
+            urlToScrape.searchParams.set('currency', 'BRL');
             
             // Definir checkin e checkout (prioridade para o original se for data futura)
             let useOriginal = false;
@@ -645,6 +647,14 @@ async function run() {
 
         let currentUrl = prop.source_url.trim();
         try {
+            // Forçar localidade e moeda BRL via cookies na sessão do Puppeteer antes de abrir a página
+            await page.setCookie(
+                { name: 'selected_currency', value: 'BRL', domain: '.booking.com', path: '/' },
+                { name: 'currency', value: 'BRL', domain: '.booking.com', path: '/' },
+                { name: 'lang', value: 'pt-br', domain: '.booking.com', path: '/' },
+                { name: 'language', value: 'pt-br', domain: '.booking.com', path: '/' }
+            );
+
             await page.goto(urlToScrape.toString(), { waitUntil: 'domcontentloaded', timeout: 60000 });
             currentUrl = page.url() || urlToScrape.toString();
 
@@ -724,22 +734,35 @@ async function run() {
                 // Função para obter o preço de uma linha da tabela de disponibilidade,
                 // priorizando o preço bruto (original/tachado) para ignorar os descontos do programa Genius.
                 const getRowPrice = (row) => {
-                    // 1. Procurar por preços originais/brutos (estão riscados/tachados em del ou s)
-                    const originalSelectors = [
-                        'del',
-                        's',
-                        '.bui-price-display__original',
-                        '[class*="original"]',
-                        '[class*="old"]',
-                        '[class*="strikethrough"]'
+                    // 1. Procurar primeiro pelo preço final de venda (ativo, sem estar riscado/tachado)
+                    const normalSelectors = [
+                        '.bui-price-display__value',
+                        '.prc-box-format__value',
+                        '[data-testid="price-and-discounted-price"]',
+                        '.prco-valign-middle-helper',
+                        'span.prco-inline-block-maker-helper',
+                        '[data-testid="price-display-value"]',
+                        '.prco-text-nowrap-helper'
                     ];
                     
                     let basePrice = null;
                     let foundEl = null;
                     
-                    for (const sel of originalSelectors) {
+                    for (const sel of normalSelectors) {
                         const els = row.querySelectorAll(sel);
                         for (const el of els) {
+                            // Ignorar se o elemento estiver dentro de del ou s (que são preços originais)
+                            let parent = el.parentElement;
+                            let inStrikethrough = false;
+                            while (parent && parent !== row) {
+                                if (parent.tagName === 'DEL' || parent.tagName === 'S' || parent.classList.contains('bui-price-display__original')) {
+                                    inStrikethrough = true;
+                                    break;
+                                }
+                                parent = parent.parentElement;
+                            }
+                            if (inStrikethrough) continue;
+                            
                             const txt = (el.innerText || el.textContent || '').trim();
                             const price = parsePriceText(txt);
                             if (price !== null && !isNaN(price) && price >= 20) {
@@ -751,32 +774,19 @@ async function run() {
                         if (basePrice !== null) break;
                     }
                     
-                    // 2. Se não houver preço original/bruto tachado, usar seletores de preço comum (sem desconto)
+                    // 2. Se não houver preço de venda direta comum, usar o preço original/bruto (tachado) como fallback
                     if (basePrice === null) {
-                        const normalSelectors = [
-                            '.bui-price-display__value',
-                            '.prc-box-format__value',
-                            '[data-testid="price-and-discounted-price"]',
-                            '.prco-valign-middle-helper',
-                            'span.prco-inline-block-maker-helper',
-                            '[data-testid="price-display-value"]',
-                            '.prco-text-nowrap-helper'
+                        const originalSelectors = [
+                            'del',
+                            's',
+                            '.bui-price-display__original',
+                            '[class*="original"]',
+                            '[class*="old"]',
+                            '[class*="strikethrough"]'
                         ];
-                        for (const sel of normalSelectors) {
+                        for (const sel of originalSelectors) {
                             const els = row.querySelectorAll(sel);
                             for (const el of els) {
-                                // Ignorar se o elemento estiver dentro de del ou s
-                                let parent = el.parentElement;
-                                let inStrikethrough = false;
-                                while (parent && parent !== row) {
-                                    if (parent.tagName === 'DEL' || parent.tagName === 'S') {
-                                        inStrikethrough = true;
-                                        break;
-                                    }
-                                    parent = parent.parentElement;
-                                }
-                                if (inStrikethrough) continue;
-                                
                                 const txt = (el.innerText || el.textContent || '').trim();
                                 const price = parsePriceText(txt);
                                 if (price !== null && !isNaN(price) && price >= 20) {
