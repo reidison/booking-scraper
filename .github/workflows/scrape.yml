@@ -33,7 +33,9 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: node scratch_debug_fetch.js || true
+        run: |
+          node test_dns_runner.js || true
+          node scratch_debug_fetch.js || true
 
       - name: Run Scraper
         env:
