@@ -30,4 +30,4 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           BOT_API_KEY: ${{ secrets.BOT_API_KEY }}
-        run: node scraper.js --once
+        run: node --dns-result-order=ipv4first scraper.js --once
