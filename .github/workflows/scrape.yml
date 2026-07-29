@@ -2,8 +2,8 @@ name: Booking Scraper
 
 on:
   schedule:
-    # Executa a cada 1 hora
-    - cron: '0 * * * *'
+    # Executa a cada 30 minutos
+    - cron: '*/30 * * * *'
   workflow_dispatch: # Permite rodar manualmente a qualquer momento pela aba Actions no GitHub
 
 jobs:
