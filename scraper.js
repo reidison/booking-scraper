@@ -1,6 +1,7 @@
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { createClient } = require('@supabase/supabase-js');
+const nodeFetch = require('node-fetch');
 const path = require('path');
 
 // Carregar variáveis de ambiente do .env
@@ -42,12 +43,16 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 // Anon key — leitura de propriedades aprovadas
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+    global: { fetch: nodeFetch }
+});
 
 // Service Role Key — grava direto nas tabelas sem RLS (preferencial)
 // Se não estiver no .env, o robô usa a Edge Function como fallback.
 const supabaseAdmin = SUPABASE_SERVICE_KEY
-    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+        global: { fetch: nodeFetch }
+    })
     : null;
 
 const BOT_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/bot-update-prices`;

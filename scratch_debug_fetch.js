@@ -1,4 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
+const nodeFetch = require('node-fetch');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const cleanEnvVar = (val) => {
     if (!val) return val;
@@ -23,39 +26,37 @@ console.log(`KEY: "${key}" (len: ${key ? key.length : 0})`);
 
 async function test() {
   try {
-    const supabase = createClient(url, key);
-    console.log('Testando query com supabase-js...');
+    console.log('--- Testando supabase-js com node-fetch ---');
+    const supabase = createClient(url, key, {
+      global: { fetch: nodeFetch }
+    });
     const { data, error } = await supabase.from('properties').select('id').limit(1);
     if (error) {
-      console.log('Query retornou erro do Supabase:', error);
+      console.log('Query com node-fetch retornou erro do Supabase:', error);
     } else {
-      console.log('Query executada com sucesso! Data:', data);
+      console.log('Query com node-fetch executada com SUCESSO! Data:', data);
     }
   } catch (err) {
-    console.log('Ocorreu uma exceção no supabase-js:', err);
+    console.log('Ocorreu uma exceção no supabase-js com node-fetch:', err);
   }
 
   try {
-    console.log('Testando fetch nativo do Node...');
+    console.log('--- Testando node-fetch diretamente ---');
     const headers = {
       'apikey': key,
       'Authorization': `Bearer ${key}`
     };
-    const res = await fetch(`${url}/rest/v1/properties?select=id&limit=1`, { headers });
-    console.log('Status do fetch nativo:', res.status);
+    const res = await nodeFetch(`${url}/rest/v1/properties?select=id&limit=1`, { headers });
+    console.log('Status do node-fetch:', res.status);
     if (!res.ok) {
       const text = await res.text();
       console.log('Corpo da resposta de erro:', text);
+    } else {
+      const json = await res.json();
+      console.log('Resultado do node-fetch:', json);
     }
   } catch (err) {
-    console.log('Erro no fetch nativo do Node:');
-    console.log('Mensagem:', err.message);
-    console.log('Stack:', err.stack);
-    if (err.cause) {
-      console.log('Causa (cause):', err.cause);
-      if (err.cause.message) console.log('Causa - Mensagem:', err.cause.message);
-      if (err.cause.stack) console.log('Causa - Stack:', err.cause.stack);
-    }
+    console.log('Erro no node-fetch diretamente:', err.message);
   }
 }
 
