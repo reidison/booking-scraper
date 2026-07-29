@@ -29,6 +29,12 @@ jobs:
           curl -i -I https://exgcaivlqfivhshfqwbc.supabase.co/rest/v1/ || true
           ping -c 3 exgcaivlqfivhshfqwbc.supabase.co || true
 
+      - name: Debug Fetch and Supabase Connection
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: node scratch_debug_fetch.js || true
+
       - name: Run Scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
