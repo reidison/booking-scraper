@@ -20,7 +20,13 @@ const cleanEnvVar = (val) => {
     return clean;
 };
 
-const SUPABASE_URL = cleanEnvVar(process.env.SUPABASE_URL);
+const SUPABASE_URL = (() => {
+    let url = cleanEnvVar(process.env.SUPABASE_URL);
+    if (url && !url.startsWith('http')) {
+        url = `https://${url}.supabase.co`;
+    }
+    return url;
+})();
 const SUPABASE_KEY = cleanEnvVar(process.env.SUPABASE_KEY);               // anon key — leitura pública
 const SUPABASE_SERVICE_KEY = cleanEnvVar(process.env.SUPABASE_SERVICE_KEY); // service role — escrita direta (opcional)
 const BOT_API_KEY = cleanEnvVar(process.env.BOT_API_KEY) || 'booking-scraper-2026';
