@@ -1,0 +1,33 @@
+name: Booking Scraper
+
+on:
+  schedule:
+    # Executa a cada 3 horas (ajuste o cron se preferir outro intervalo)
+    - cron: '0 */3 * * *'
+  workflow_dispatch: # Permite rodar manualmente a qualquer momento pela aba Actions no GitHub
+
+jobs:
+  scrape:
+    name: Run Scraper Job
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          BOT_API_KEY: ${{ secrets.BOT_API_KEY }}
+        run: node scraper.js --once
