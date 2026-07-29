@@ -1,7 +1,22 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const url = process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_KEY;
+const cleanEnvVar = (val) => {
+    if (!val) return val;
+    let clean = val.trim();
+    if ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) {
+        clean = clean.substring(1, clean.length - 1).trim();
+    }
+    return clean;
+};
+
+const url = (() => {
+    let u = cleanEnvVar(process.env.SUPABASE_URL);
+    if (u && !u.startsWith('http')) {
+        u = `https://${u}.supabase.co`;
+    }
+    return u;
+})();
+const key = cleanEnvVar(process.env.SUPABASE_KEY);
 
 console.log(`URL: "${url}" (len: ${url ? url.length : 0})`);
 console.log(`KEY: "${key}" (len: ${key ? key.length : 0})`);
