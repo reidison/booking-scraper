@@ -26,6 +26,10 @@ const SUPABASE_SERVICE_KEY = cleanEnvVar(process.env.SUPABASE_SERVICE_KEY); // s
 const BOT_API_KEY = cleanEnvVar(process.env.BOT_API_KEY) || 'booking-scraper-2026';
 const INTERVALO_PADRAO_MS = 15 * 60 * 1000;
 
+console.log(`DEBUG: SUPABASE_URL = "${SUPABASE_URL}" (length: ${SUPABASE_URL ? SUPABASE_URL.length : 0})`);
+console.log(`DEBUG: SUPABASE_KEY is set: ${!!SUPABASE_KEY} (length: ${SUPABASE_KEY ? SUPABASE_KEY.length : 0})`);
+
+
 if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.error('❌ ERRO: SUPABASE_URL e SUPABASE_KEY são obrigatórios no .env');
     process.exit(1);
