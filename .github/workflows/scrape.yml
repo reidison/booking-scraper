@@ -34,6 +34,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
+          node print_env_debug.js || true
           node test_dns_runner.js || true
           node scratch_debug_fetch.js || true
 
