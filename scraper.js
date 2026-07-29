@@ -11,10 +11,19 @@ puppeteer.use(StealthPlugin());
 // ══════════════════════════════════════════════════════════════
 //  CONFIGURAÇÃO
 // ══════════════════════════════════════════════════════════════
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY;               // anon key — leitura pública
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY; // service role — escrita direta (opcional)
-const BOT_API_KEY = process.env.BOT_API_KEY || 'booking-scraper-2026';
+const cleanEnvVar = (val) => {
+    if (!val) return val;
+    let clean = val.trim();
+    if ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) {
+        clean = clean.substring(1, clean.length - 1).trim();
+    }
+    return clean;
+};
+
+const SUPABASE_URL = cleanEnvVar(process.env.SUPABASE_URL);
+const SUPABASE_KEY = cleanEnvVar(process.env.SUPABASE_KEY);               // anon key — leitura pública
+const SUPABASE_SERVICE_KEY = cleanEnvVar(process.env.SUPABASE_SERVICE_KEY); // service role — escrita direta (opcional)
+const BOT_API_KEY = cleanEnvVar(process.env.BOT_API_KEY) || 'booking-scraper-2026';
 const INTERVALO_PADRAO_MS = 15 * 60 * 1000;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
