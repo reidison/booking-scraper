@@ -806,25 +806,6 @@ async function run() {
                     
                     if (basePrice === null) return null;
                     
-                    // 3. Adicionar impostos e taxas adicionais, se existirem na célula
-                    let cell = foundEl;
-                    while (cell && cell.parentElement && cell.tagName !== 'TD' && cell !== row) {
-                        const className = (cell.className || '').toString().toLowerCase();
-                        if (className.includes('price') || className.includes('cell') || cell.tagName === 'TR') {
-                            break;
-                        }
-                        cell = cell.parentElement;
-                    }
-                    const cellText = cell ? cell.innerText || '' : '';
-                    const taxMatch = cellText.match(/\+\s*(?:R\$|\$)\s*([\d.,]+)/i);
-                    if (taxMatch) {
-                        const taxStr = taxMatch[1];
-                        const taxPrice = parsePriceText("R$ " + taxStr);
-                        if (taxPrice !== null && !isNaN(taxPrice)) {
-                            return basePrice + taxPrice;
-                        }
-                    }
-                    
                     return basePrice;
                 };
 
