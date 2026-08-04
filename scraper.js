@@ -757,7 +757,7 @@ async function run() {
                         for (const el of els) {
                             const txt = (el.innerText || el.textContent || '').trim();
                             const price = parsePriceText(txt);
-                            if (price !== null && !isNaN(price) && price >= 20) {
+                            if (price !== null && !isNaN(price) && price >= 100) {
                                 basePrice = price;
                                 foundEl = el;
                                 break;
@@ -794,7 +794,7 @@ async function run() {
                                 
                                 const txt = (el.innerText || el.textContent || '').trim();
                                 const price = parsePriceText(txt);
-                                if (price !== null && !isNaN(price) && price >= 20) {
+                                if (price !== null && !isNaN(price) && price >= 100) {
                                     basePrice = price;
                                     foundEl = el;
                                     break;
@@ -941,7 +941,7 @@ async function run() {
                     const rows = table.querySelectorAll('tr');
                     for (const row of rows) {
                         const price = getRowPrice(row);
-                        if (price !== null && !isNaN(price) && price >= 20) {
+                        if (price !== null && !isNaN(price) && price >= 100) {
                             if (lowestTablePrice === null || price < lowestTablePrice) {
                                 lowestTablePrice = price;
                             }
