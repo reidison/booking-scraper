@@ -480,8 +480,9 @@ async function updateSupabaseDirectly(updates) {
             }
         }
 
-        // Atualiza preço base da propriedade com o menor preço ativo da rodada, URL e o timestamp de verificação (updated_at)
-        const minPrice = activeRoomPrices.length > 0 ? Math.min(...activeRoomPrices) : 0;
+        // Atualiza preço base da propriedade com o menor preço ativo da rodada (filtrando anomalias < R$ 100), URL e o timestamp de verificação (updated_at)
+        const validRoomPrices = activeRoomPrices.filter(p => p >= 100);
+        const minPrice = validRoomPrices.length > 0 ? Math.min(...validRoomPrices) : 0;
         await supabaseAdmin.from('properties').update({ 
             price: minPrice, 
             source_url: latestSourceUrl,
@@ -1118,6 +1119,12 @@ async function run() {
         }
         if (update.price < 0) {
             console.warn(`⚠️  Removendo atualização com preço negativo:`, update.property_name);
+            return false;
+        }
+
+        // Regra de Integridade: Preços de diárias em Ouro Preto não são inferiores a R$ 100 (evita artefatos de desconto como 35%).
+        if (update.price > 0 && update.price < 100) {
+            console.warn(`⚠️  Removendo atualização com preço anômalo/inferior a R$ 100 (R$ ${update.price}):`, update.property_name, update.room_name);
             return false;
         }
         
