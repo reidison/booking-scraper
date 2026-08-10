@@ -739,7 +739,13 @@ async function run() {
 
                 // Função para obter o preço de uma linha da tabela de disponibilidade,
                 // priorizando o preço bruto (original/tachado) para ignorar os descontos do programa Genius.
+                // Restrita estritamente à célula da coluna de preço ("Preço de hoje") para ignorar condicionais de "Suas escolhas" (ex: Café da manhã R$ 35).
                 const getRowPrice = (row) => {
+                    const priceCell = row.querySelector('.hprt-table-cell-price, [data-cell-id*="price"], [data-testid="price-and-discounted-price"], .bui-table__cell--price') ||
+                                      Array.from(row.children).find(td => td.querySelector && (td.querySelector('.bui-price-display__value, .prc-box-format__value, [data-testid="price-and-discounted-price"], del, s')));
+
+                    const searchContext = priceCell || row;
+
                     // 1. Procurar por preços originais/brutos (estão riscados/tachados em del ou s) para ignorar tarifas do programa Genius e promoções
                     const originalSelectors = [
                         'del',
@@ -754,7 +760,7 @@ async function run() {
                     let foundEl = null;
                     
                     for (const sel of originalSelectors) {
-                        const els = row.querySelectorAll(sel);
+                        const els = searchContext.querySelectorAll(sel);
                         for (const el of els) {
                             const txt = (el.innerText || el.textContent || '').trim();
                             const price = parsePriceText(txt);
@@ -779,12 +785,12 @@ async function run() {
                             '.prco-text-nowrap-helper'
                         ];
                         for (const sel of normalSelectors) {
-                            const els = row.querySelectorAll(sel);
+                            const els = searchContext.querySelectorAll(sel);
                             for (const el of els) {
                                 // Ignorar se o elemento estiver dentro de del ou s
                                 let parent = el.parentElement;
                                 let inStrikethrough = false;
-                                while (parent && parent !== row) {
+                                while (parent && parent !== searchContext) {
                                     if (parent.tagName === 'DEL' || parent.tagName === 'S') {
                                         inStrikethrough = true;
                                         break;
