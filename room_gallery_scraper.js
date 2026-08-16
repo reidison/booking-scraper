@@ -144,19 +144,16 @@ async function scrapePropertyRoomGalleries(page, property) {
 
             let idxCounter = 0;
             const items = [];
-            const rows = table.querySelectorAll('tr');
+            const elements = Array.from(table.querySelectorAll('a.hprt-roomtype-link, span.hprt-roomtype-icon-link, a[data-testid="rt-name-link"], [data-room-name-en]'));
 
-            for (const row of rows) {
-                const nameEl = row.querySelector('.hprt-roomtype-icon-link, .hprt-roomtype-link, [data-room-name-en], .room-info, a[class*="roomtype"], a[class*="room-name"]');
-                if (nameEl) {
-                    const name = (nameEl.innerText || nameEl.textContent || '').trim();
-                    if (name) {
-                        if (!nameEl.hasAttribute('data-scraper-idx')) {
-                            nameEl.setAttribute('data-scraper-idx', String(idxCounter++));
-                        }
-                        const idx = parseInt(nameEl.getAttribute('data-scraper-idx'), 10);
-                        items.push({ name, idx });
+            for (const el of elements) {
+                const name = (el.innerText || el.textContent || '').trim();
+                if (name && name.length > 2) {
+                    if (!el.hasAttribute('data-scraper-idx')) {
+                        el.setAttribute('data-scraper-idx', String(idxCounter++));
                     }
+                    const idx = parseInt(el.getAttribute('data-scraper-idx'), 10);
+                    items.push({ name, idx });
                 }
             }
             return items;
@@ -207,7 +204,7 @@ async function scrapePropertyRoomGalleries(page, property) {
                             const st = window.getComputedStyle(el);
                             const isPositioned = ['fixed', 'absolute'].includes(st.position);
                             const zIndex = parseInt(st.zIndex, 10);
-                            return isPositioned && zIndex >= 100 && el.offsetHeight > 200 && el.offsetWidth > 200;
+                            return isPositioned && zIndex >= 50 && el.offsetHeight > 180;
                         });
 
                         if (modals.length === 0) return [];

@@ -123,8 +123,6 @@ const KNOWN_BOOKING_LINKS = {
     "pousada casa dos contos": "https://www.booking.com/hotel/br/pousada-casa-dos-contos.pt-br.html?aid=304142",
     "hotel pousada casa grande": "https://www.booking.com/hotel/br/pousada-casa-grande-ouro-preto.pt-br.html?aid=304142",
     "pousada dos oficios": "https://www.booking.com/hotel/br/pousada-dos-oficios.pt-br.html?aid=304142",
-    "pousada boutique chico anjo": "https://www.booking.com/hotel/br/pousada-chico-anjo.pt-br.html?aid=304142",
-    "pousada chico anjo": "https://www.booking.com/hotel/br/pousada-chico-anjo.pt-br.html?aid=304142",
     "chale vila catarina": "https://www.booking.com/hotel/br/pousada-vila-catarina-ouro-preto2.pt-br.html?aid=304142",
     "hotel luxor": "https://www.booking.com/hotel/br/luxor-ouro-preto-pousada.pt-br.html?aid=304142",
     "pousada caminhos da liberdade": "https://www.booking.com/hotel/br/pousada-caminhos-da-liberdade.pt-br.html?aid=304142",
@@ -135,6 +133,7 @@ const KNOWN_BOOKING_LINKS = {
     "pouso jardim de assis": "https://www.booking.com/hotel/br/pouso-jardim-de-assis.pt-br.html?aid=304142",
     "hotel pousada do arcanjo": "https://www.booking.com/hotel/br/arcanjo.pt-br.html?aid=360920",
     "pousada colonial": "https://www.booking.com/hotel/br/pousada-colonial-ouro-preto.pt-br.html?aid=304142",
+    "hotel colonial": "https://www.booking.com/hotel/br/pousada-colonial-ouro-preto.pt-br.html?aid=304142",
     "vila gale collection ouro preto": "https://www.booking.com/hotel/br/vila-gale-collection-ouro.pt-br.html?aid=304142"
 };
 
@@ -225,9 +224,9 @@ async function sendPricesToEdgeFunction(updates) {
 }
 
 // Despachante: usa gravação direta se disponível, Edge Function caso contrário
-async function saveUpdates(updates) {
+async function saveUpdates(updates, checkedPropIds = []) {
     if (supabaseAdmin) {
-        await updateSupabaseDirectly(updates);
+        await updateSupabaseDirectly(updates, checkedPropIds);
     } else {
         await sendPricesToEdgeFunction(updates);
     }
@@ -241,9 +240,101 @@ function normalize(s) {
     return s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-async function updateSupabaseDirectly(updates) {
-    if (updates.length === 0) {
+// Algoritmo Próprio de Avaliação ("Score Ouro Preto / IQH")
+function calculateProprietaryScore(prop) {
+    const rawScore = Number(prop.review_score) || Number(prop.seed_review_score) || 8.5;
+    const rawCount = Number(prop.review_count) || Number(prop.seed_review_count) || 50;
+    const dist = Number(prop.distance_from_center) || 1.0;
+    const amenities = Array.isArray(prop.amenities) ? prop.amenities : [];
+    const price = Number(prop.price) || 0;
+
+    // 1. Satisfação Ajustada (Suavização Bayesiana) - Peso 45%
+    const m = 15;
+    const C = 8.5;
+    const bayesianScore = (rawCount * rawScore + m * C) / (rawCount + m);
+
+    // 2. Nota de Localização Histórica (0 a 10) - Peso 25%
+    let locationScore = 10;
+    if (dist > 0.5) {
+        locationScore = Math.max(6.0, 10 - (dist - 0.5) * 1.2);
+    }
+    locationScore = Math.round(locationScore * 10) / 10;
+
+    // 3. Nota de Infraestrutura e Comodidades (0 a 10) - Peso 15%
+    let amenitiesScore = 7.0;
+    if (amenities.length > 0) {
+        amenitiesScore += Math.min(2.5, amenities.length * 0.4);
+    }
+    const keyAmenities = ['wifi', 'estacionamento', 'café da manhã', 'acessibilidade', 'pet friendly', 'recepção 24h'];
+    const lowerAmenities = amenities.map(a => String(a).toLowerCase());
+    for (const key of keyAmenities) {
+        if (lowerAmenities.some(a => a.includes(key))) {
+            amenitiesScore += 0.2;
+        }
+    }
+    amenitiesScore = Math.min(10.0, Math.round(amenitiesScore * 10) / 10);
+
+    // 4. Nota de Custo-Benefício (0 a 10) - Peso 15%
+    let valueScore = 8.5;
+    if (price > 0) {
+        if (price < 350) valueScore = 9.5;
+        else if (price < 500) valueScore = 9.0;
+        else if (price < 800) valueScore = 8.5;
+        else valueScore = 8.0;
+    }
+    valueScore = Math.round(valueScore * 10) / 10;
+
+    const customScoreRaw = (bayesianScore * 0.45) + (locationScore * 0.25) + (amenitiesScore * 0.15) + (valueScore * 0.15);
+    const customScore = Math.round(customScoreRaw * 10) / 10;
+    const customStars = Math.round((customScore / 2) * 10) / 10;
+
+    let qualityBadge = 'Bom Custo-Benefício';
+    if (customScore >= 9.2) {
+        qualityBadge = 'Ouro Preto Select 💎';
+    } else if (customScore >= 8.6) {
+        qualityBadge = 'Excelência Histórica 🏅';
+    } else if (customScore >= 8.0) {
+        qualityBadge = 'Muito Recomendado 👍';
+    }
+
+    const subScores = {
+        reputation: Math.round(bayesianScore * 10) / 10,
+        location: locationScore,
+        amenities: amenitiesScore,
+        value: valueScore
+    };
+
+    return {
+        custom_score: customScore,
+        custom_stars: customStars,
+        quality_badge: qualityBadge,
+        sub_scores: subScores
+    };
+}
+
+async function updateSupabaseDirectly(updates, checkedPropIds = []) {
+    if (updates.length === 0 && checkedPropIds.length === 0) {
         console.log('ℹ️  Nenhuma atualização para gravar.');
+        return;
+    }
+
+    const now = new Date().toISOString();
+
+    // Atualizar timestamp updated_at para TODAS as propriedades verificadas nesta rodada
+    if (checkedPropIds && checkedPropIds.length > 0) {
+        const { error: tsErr } = await supabaseAdmin
+            .from('properties')
+            .update({ updated_at: now })
+            .in('id', checkedPropIds);
+        if (tsErr) {
+            console.warn(`   ⚠️ Erro ao atualizar timestamp de verificação: ${tsErr.message}`);
+        } else {
+            console.log(`   🕒 Timestamps (updated_at) de ${checkedPropIds.length} propriedade(s) verificada(s) atualizados.`);
+        }
+    }
+
+    if (updates.length === 0) {
+        console.log('ℹ️  Nenhuma alteração de preço para gravar.');
         return;
     }
 
@@ -251,7 +342,7 @@ async function updateSupabaseDirectly(updates) {
 
     // Carrega propriedades e quartos existentes
     const { data: properties, error: propErr } = await supabaseAdmin
-        .from('properties').select('id, name, price, source_url');
+        .from('properties').select('id, name, price, source_url, review_score, review_count, distance_from_center, amenities, seed_review_score, seed_review_count');
     const { data: rooms, error: roomErr } = await supabaseAdmin
         .from('rooms').select('id, name, price, property_id, adults, children');
 
@@ -274,7 +365,6 @@ async function updateSupabaseDirectly(updates) {
         roomsByProp.get(r.property_id).push(r);
     }
 
-    const now = new Date().toISOString();
     let changesCount = 0;
     const notFound = [];
     const historyInserts = [];
@@ -320,38 +410,37 @@ async function updateSupabaseDirectly(updates) {
         const isPropSoldOut = propUpdates.every(u => u.status === 'sold_out' || u.price <= 0);
 
         if (isPropSoldOut) {
-            // Excluir todos os quartos existentes (esgotados) em lote
-            if (propRooms.length > 0) {
-                const roomIdsToDelete = propRooms.map(r => r.id);
-                await supabaseAdmin.from('rooms').delete().in('id', roomIdsToDelete);
-                for (const room of propRooms) {
+            // Propriedade esgotada para a data de hoje: atualiza preço base para 0 e marca quartos como 0 (Esgotado)
+            const ratingData = calculateProprietaryScore({ ...prop, price: 0 });
+            await supabaseAdmin.from('properties').update({ 
+                price: 0, 
+                source_url: latestSourceUrl,
+                updated_at: now,
+                ...ratingData
+            }).eq('id', propId);
+
+            // Atualiza quartos existentes no banco para preço 0 (Esgotado para hoje)
+            for (const r of propRooms) {
+                if (r.price > 0) {
+                    await supabaseAdmin.from('rooms').update({ price: 0 }).eq('id', r.id);
                     historyInserts.push({
                         property_id: propId,
-                        room_id: null,
-                        room_name: room.name + " (Excluído - Esgotado)",
-                        old_price: room.price,
+                        room_id: r.id,
+                        room_name: r.name,
+                        old_price: r.price,
                         new_price: 0,
                         source_url: latestSourceUrl,
                         checked_at: now,
                         verified_at: now,
                     });
-                    changesCount++;
-                    console.log(`   🗑️ ${prop.name} / ${room.name}: esgotado e excluído (era R$ ${room.price})`);
                 }
             }
-            
-            // Zera preço base da propriedade, atualiza URL e o timestamp de verificação (updated_at)
-            await supabaseAdmin.from('properties').update({ 
-                price: 0, 
-                source_url: latestSourceUrl,
-                updated_at: now 
-            }).eq('id', propId);
-            
-            if (prop.price > 0) {
+
+            if (prop.price !== 0) {
                 historyInserts.push({
                     property_id: propId,
                     room_id: null,
-                    room_name: 'Indisponível (Esgotado)',
+                    room_name: 'Esgotado para hoje',
                     old_price: prop.price,
                     new_price: 0,
                     source_url: latestSourceUrl,
@@ -359,10 +448,8 @@ async function updateSupabaseDirectly(updates) {
                     verified_at: now,
                 });
                 changesCount++;
-                console.log(`   🚫 ${prop.name}: esgotado (era R$ ${prop.price})`);
-            } else {
-                console.log(`   🚫 ${prop.name}: esgotado (sem alteração de preço, timestamp atualizado)`);
             }
+            console.log(`   🚫 ${prop.name}: Esgotado para hoje (preço atualizado para R$ 0 no Supabase).`);
             continue;
         }
 
@@ -459,34 +546,18 @@ async function updateSupabaseDirectly(updates) {
             }
         }
 
-        // Excluir quartos que NÃO vieram na raspagem (quartos obsoletos/desatualizados) em lote
-        const obsoleteRooms = propRooms.filter(room => !updatedRoomIds.has(room.id));
-        if (obsoleteRooms.length > 0) {
-            const obsoleteIds = obsoleteRooms.map(r => r.id);
-            await supabaseAdmin.from('rooms').delete().in('id', obsoleteIds);
-            for (const room of obsoleteRooms) {
-                historyInserts.push({
-                    property_id: propId,
-                    room_id: null,
-                    room_name: room.name + ' (Excluído)',
-                    old_price: room.price,
-                    new_price: 0,
-                    source_url: latestSourceUrl,
-                    checked_at: now,
-                    verified_at: now,
-                });
-                changesCount++;
-                console.log(`   🗑️ ${prop.name} / ${room.name}: excluído/não listado nesta rodada (era R$ ${room.price})`);
-            }
-        }
+        // Mantém quartos já cadastrados sem excluí-los em oscilações temporárias de raspagem
 
-        // Atualiza preço base da propriedade com o menor preço ativo da rodada (filtrando anomalias < R$ 100), URL e o timestamp de verificação (updated_at)
+        // Atualiza preço base da propriedade com o menor preço ativo da rodada (filtrando anomalias < R$ 100), URL, timestamp de verificação (updated_at) e o Score Ouro Preto autoral
         const validRoomPrices = activeRoomPrices.filter(p => p >= 100);
         const minPrice = validRoomPrices.length > 0 ? Math.min(...validRoomPrices) : 0;
+        const ratingData = calculateProprietaryScore({ ...prop, price: minPrice });
+
         await supabaseAdmin.from('properties').update({ 
             price: minPrice, 
             source_url: latestSourceUrl,
-            updated_at: now 
+            updated_at: now,
+            ...ratingData
         }).eq('id', propId);
 
         if (prop.price !== minPrice) {
@@ -535,125 +606,102 @@ async function updateSupabaseDirectly(updates) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  SCRAPING PRINCIPAL
+//  SCRAPING PRINCIPAL (Otimizado com Concorrência e Retries)
 // ══════════════════════════════════════════════════════════════
-async function run() {
-    const today = new Date();
-    // Usar hoje como check-in para buscar preços do mesmo dia (realtime/last minute)
-    const checkin = new Date(today);
-    
-    const checkout = new Date(checkin);
-    checkout.setDate(checkout.getDate() + 1);
-    
-    const checkinDate = formatDate(checkin);
-    const checkoutDate = formatDate(checkout);
 
-    console.log('\n══════════════════════════════════════════════════════════');
-    console.log('   🤖 ROBÔ BOOKING-SCRAPER → LOVABLE (via Edge Function)');
-    console.log(`   📅 Check-in: ${checkinDate} | Check-out: ${checkoutDate}`);
-    console.log(`   ⏰ ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
-    console.log('══════════════════════════════════════════════════════════\n');
+// Otimização: Interceptador de requisições para bloquear mídias pesadas e rastreadores
+async function setupPageOptimizations(page) {
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+        const resourceType = req.resourceType();
+        const url = req.url().toLowerCase();
 
-    // 1) Buscar propriedades (leitura pública)
-    let properties = await fetchProperties();
-
-    const propFilterIdx = process.argv.indexOf('--property');
-    if (propFilterIdx !== -1 && process.argv[propFilterIdx + 1]) {
-        const filterVal = process.argv[propFilterIdx + 1].toLowerCase();
-        properties = properties.filter(p => p.name.toLowerCase().includes(filterVal));
-        console.log(`   🔍 Filtrando propriedades por: "${process.argv[propFilterIdx + 1]}" (restante: ${properties.length})`);
-    }
-
-    if (properties.length === 0) {
-        console.log('⚠️  Nenhuma propriedade correspondente encontrada.');
-        return;
-    }
-
-    // 2) Iniciar navegador
-    console.log('🌐 Iniciando navegador Puppeteer (modo stealth)...');
-    const browser = await puppeteer.launch({
-        headless: 'new',
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-blink-features=AutomationControlled',
-            '--disable-web-security',
-            '--disable-features=IsolateOrigins,site-per-process',
-        ],
+        if (
+            resourceType === 'font' ||
+            resourceType === 'media' ||
+            url.includes('google-analytics') ||
+            url.includes('doubleclick') ||
+            url.includes('facebook') ||
+            url.includes('analytics') ||
+            url.includes('gtm.js')
+        ) {
+            req.abort();
+        } else {
+            req.continue();
+        }
     });
+}
 
-    const allUpdates = [];
+// Raspagem de propriedade individual com Retries (re-tentativas automáticas)
+async function scrapePropertyWithRetry(browser, prop, index, totalProps, checkinDate, checkoutDate) {
+    const MAX_RETRIES = 2;
+    let attempt = 0;
 
-    for (let i = 0; i < properties.length; i++) {
-        const prop = properties[i];
-        console.log(`\n[${i + 1}/${properties.length}] 🏨 ${prop.name}`);
+    const userAgents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+    ];
 
-        // Construir URL com datas dinâmicas ou preservadas
-        let urlToScrape;
-        try {
-            urlToScrape = new URL(prop.source_url.trim());
-            
-            // Extrair parâmetros funcionais originais antes de limpar a query string
-            const originalCheckin = urlToScrape.searchParams.get('checkin');
-            const originalCheckout = urlToScrape.searchParams.get('checkout');
-            const originalAdults = urlToScrape.searchParams.get('group_adults') || urlToScrape.searchParams.get('req_adults');
-            const originalChildren = urlToScrape.searchParams.get('group_children') || urlToScrape.searchParams.get('req_children');
-            const originalNoRooms = urlToScrape.searchParams.get('no_rooms');
-            const originalRoom1 = urlToScrape.searchParams.get('room1');
-            
-            // Limpar parâmetros antigos (como aid, label) para evitar redirecionamento forçado para a busca
-            urlToScrape.search = '';
-            
-            // Garantir locale pt-br — cobre .pt-pt.html, .en-us.html, .html sem locale e sem .html
-            const p = urlToScrape.pathname;
-            if (/\.[a-z]{2}(?:-[a-z]{2})?\.html$/i.test(p)) {
-                urlToScrape.pathname = p.replace(/\.[a-z]{2}(?:-[a-z]{2})?\.html$/i, '.pt-br.html');
-            } else if (p.endsWith('.html')) {
-                urlToScrape.pathname = p.replace(/\.html$/i, '.pt-br.html');
-            } else {
-                urlToScrape.pathname = p.replace(/\/$/, '') + '.pt-br.html';
-            }
-            urlToScrape.searchParams.set('lang', 'pt-br');
-            urlToScrape.searchParams.set('selected_currency', 'BRL');
-            urlToScrape.searchParams.set('currency', 'BRL');
-            
-            // Regra Estrita: Sempre raspar o preço do dia (hoje para amanhã), ignorando datas futuras ou passadas da URL
+    let urlToScrape;
+    try {
+        urlToScrape = new URL(prop.source_url.trim());
+        const originalAdults = urlToScrape.searchParams.get('group_adults') || urlToScrape.searchParams.get('req_adults');
+        const originalChildren = urlToScrape.searchParams.get('group_children') || urlToScrape.searchParams.get('req_children');
+        const originalNoRooms = urlToScrape.searchParams.get('no_rooms');
+        const originalRoom1 = urlToScrape.searchParams.get('room1');
+
+        urlToScrape.search = '';
+        urlToScrape.hash = '';
+
+        const p = urlToScrape.pathname;
+        if (/\.[a-z]{2}(?:-[a-z]{2})?\.html$/i.test(p)) {
+            urlToScrape.pathname = p.replace(/\.[a-z]{2}(?:-[a-z]{2})?\.html$/i, '.pt-br.html');
+        } else if (p.endsWith('.html')) {
+            urlToScrape.pathname = p.replace(/\.html$/i, '.pt-br.html');
+        } else {
+            urlToScrape.pathname = p.replace(/\/$/, '') + '.pt-br.html';
+        }
+        urlToScrape.searchParams.set('lang', 'pt-br');
+        urlToScrape.searchParams.set('selected_currency', 'BRL');
+        urlToScrape.searchParams.set('currency', 'BRL');
+        urlToScrape.searchParams.set('checkin', checkinDate);
+        urlToScrape.searchParams.set('checkout', checkoutDate);
+        urlToScrape.searchParams.set('group_adults', originalAdults || '2');
+        urlToScrape.searchParams.set('group_children', originalChildren || '0');
+        urlToScrape.searchParams.set('no_rooms', originalNoRooms || '1');
+        if (originalRoom1) urlToScrape.searchParams.set('room1', originalRoom1);
+    } catch (e) {
+        console.log(`   ❌ [${index + 1}/${totalProps}] ${prop.name}: URL inválida -> ${prop.source_url}`);
+        return { status: 'INVALID_URL', updates: [], prop };
+    }
+
+    while (attempt < MAX_RETRIES) {
+        attempt++;
+        let currentCheckin = checkinDate;
+        let currentCheckout = checkoutDate;
+
+        if (attempt > 1) {
+            // Re-tentativa para a MESMA data (hoje) com novo User Agent / aba limpa
             urlToScrape.searchParams.set('checkin', checkinDate);
             urlToScrape.searchParams.set('checkout', checkoutDate);
-            
-            // Definir quantidade de hóspedes e quartos (prioridade para o original)
-            urlToScrape.searchParams.set('group_adults', originalAdults || '2');
-            urlToScrape.searchParams.set('group_children', originalChildren || '0');
-            urlToScrape.searchParams.set('no_rooms', originalNoRooms || '1');
-            if (originalRoom1) {
-                urlToScrape.searchParams.set('room1', originalRoom1);
-            }
-        } catch (e) {
-            console.log(`   ❌ URL inválida: ${prop.source_url}`);
-            continue;
         }
 
-        console.log(`   📅 Pesquisando período: ${urlToScrape.searchParams.get('checkin')} a ${urlToScrape.searchParams.get('checkout')} (${urlToScrape.searchParams.get('group_adults')} adulto(s), ${urlToScrape.searchParams.get('group_children')} criança(s))`);
+        const attemptLabel = attempt > 1 ? ` 🔄 (Re-tentativa ${attempt}/${MAX_RETRIES})` : '';
+        console.log(`[${index + 1}/${totalProps}] 🏨 ${prop.name}${attemptLabel}`);
 
-        const page = await browser.newPage();
-        await page.setViewport({ width: 1280, height: 800 });
-
-        // User-Agent rotativo
-        const userAgents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-        ];
-        await page.setUserAgent(userAgents[i % userAgents.length]);
-
-        await page.setExtraHTTPHeaders({
-            'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        });
-
-        let currentUrl = prop.source_url.trim();
+        let page;
         try {
-            // Forçar localidade e moeda BRL via cookies na sessão do Puppeteer antes de abrir a página
+            page = await browser.newPage();
+            await page.setViewport({ width: 1280, height: 800 });
+            await setupPageOptimizations(page);
+            await page.setUserAgent(userAgents[(index + attempt) % userAgents.length]);
+
+            await page.setExtraHTTPHeaders({
+                'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            });
+
             await page.setCookie(
                 { name: 'selected_currency', value: 'BRL', domain: '.booking.com', path: '/' },
                 { name: 'currency', value: 'BRL', domain: '.booking.com', path: '/' },
@@ -661,10 +709,9 @@ async function run() {
                 { name: 'language', value: 'pt-br', domain: '.booking.com', path: '/' }
             );
 
-            await page.goto(urlToScrape.toString(), { waitUntil: 'domcontentloaded', timeout: 60000 });
-            currentUrl = page.url() || urlToScrape.toString();
+            await page.goto(urlToScrape.toString(), { waitUntil: 'domcontentloaded', timeout: 35000 });
+            const currentUrl = page.url() || urlToScrape.toString();
 
-            // Aceitar cookie consent (GDPR) — bloqueia a tabela de disponibilidade se não for dispensado
             const cookieSelectors = [
                 '#onetrust-accept-btn-handler',
                 '[id*="accept"][id*="cookie"]',
@@ -673,40 +720,63 @@ async function run() {
             ];
             for (const sel of cookieSelectors) {
                 try {
-                    await page.click(sel, { timeout: 3000 });
-                    await sleep(800);
+                    await page.click(sel, { timeout: 2000 });
+                    await sleep(400);
                     break;
                 } catch (_) {}
             }
 
-            // Espera variável (5-8s) para evitar detecção de padrão
-            const waitTime = 5000 + Math.floor(Math.random() * 3000);
+            // Otimizado para 2-3s com bloqueio de mídia ativado
+            const waitTime = 2000 + Math.floor(Math.random() * 1000);
             await sleep(waitTime);
 
-            // Aguarda a tabela de disponibilidade carregar (JS assíncrono)
             try {
                 await page.waitForSelector(
                     '.hprt-table, [data-testid="availability-table"], table[data-block="availability_table"]',
-                    { timeout: 15000 }
+                    { timeout: 10000 }
                 );
             } catch (_) {
-                console.log('   ⚠️  Tabela de disponibilidade não carregou — tentando extrair assim mesmo');
+                console.log(`   ⚠️ [${prop.name}] Tabela de disponibilidade não carregou no tempo — tentando extrair assim mesmo`);
             }
 
-            // Scroll humano
-            await page.evaluate(() => window.scrollBy(0, 300));
-            await sleep(1000);
+            // ── CORREÇÃO: Scroll progressivo para forçar lazy-load dos preços ──
+            // O Booking.com carrega os preços da coluna .hprt-table-cell-price
+            // de forma assíncrona APÓS a tabela já estar no DOM.
+            // Sem os scrolls abaixo, a coluna de preços chega vazia.
+            await page.evaluate(() => window.scrollBy(0, 400));
+            await sleep(600);
+            await page.evaluate(() => window.scrollBy(0, 400));
+            await sleep(600);
 
-            console.log('   🔍 Extraindo dados de preço...');
+            // Aguardar especificamente que os preços sejam populados no DOM
+            try {
+                await page.waitForFunction(() => {
+                    const cells = document.querySelectorAll('.hprt-table-cell-price, [data-cell-id*="price"]');
+                    return cells.length > 0 && [...cells].some(c => {
+                        const txt = (c.innerText || c.textContent || '').trim();
+                        return /R\$/.test(txt) || /\d{3,}/.test(txt);
+                    });
+                }, { timeout: 8000 });
+            } catch (_) {
+                console.log(`   ⚠️ [${prop.name}] Preços não detectados na tabela após scroll — prosseguindo com extração`);
+            }
+
+            await page.evaluate(() => window.scrollBy(0, 200));
+            await sleep(400);
+
             const data = await page.evaluate(async () => {
-
-                // Função de parser de preço robusta rodando dentro do navegador para páginas em Pt-Br (BRL)
                 const parsePriceText = (text) => {
                     if (!text) return null;
                     const cleanText = text.trim();
-                    if (!cleanText.includes('R$')) return null;
-                    
-                    // Limpa mantendo apenas dígitos, ponto e vírgula
+                    if (!cleanText.includes('R$') && !cleanText.includes('$')) return null;
+
+                    // Descartar explicitamente textos referentes a adicionais como café da manhã, taxas e suplementos
+                    const lower = cleanText.toLowerCase();
+                    if (lower.includes('café') || lower.includes('breakfast') || lower.includes('opcional') || 
+                        lower.includes('suplemento') || lower.includes('adicional') || lower.includes('taxa')) {
+                        return null;
+                    }
+
                     const filtered = cleanText.replace(/[^0-9.,]/g, '');
                     if (!filtered) return null;
                     
@@ -715,17 +785,18 @@ async function run() {
                     const hasComma = filtered.includes(',');
                     
                     if (hasDot && hasComma) {
-                        // Exemplo: 1.250,50 -> 1250.50
+                        // Formato brasileiro com milhar e centavos: 1.450,00 -> 1450.00
                         priceVal = parseFloat(filtered.replace(/\./g, '').replace(/,/g, '.'));
                     } else if (hasComma) {
-                        // Exemplo: 589,00 -> 589.00
+                        // Formato com vírgula decimal: 450,00 -> 450.00
                         priceVal = parseFloat(filtered.replace(/,/g, '.'));
                     } else if (hasDot) {
-                        // Exemplo: 1.250 -> 1250
                         const parts = filtered.split('.');
                         if (parts[parts.length - 1].length === 3) {
+                            // Ponto de milhar: 1.450 -> 1450
                             priceVal = parseFloat(filtered.replace(/\./g, ''));
                         } else {
+                            // Ponto decimal: 450.00 -> 450.00
                             priceVal = parseFloat(filtered);
                         }
                     } else {
@@ -733,87 +804,95 @@ async function run() {
                     }
                     
                     if (isNaN(priceVal) || priceVal <= 0) return null;
-                    
-                    return Math.round(priceVal * 100) / 100;
+
+                    const finalPrice = Math.round(priceVal * 100) / 100;
+
+                    // Bloqueio definitivo e cirúrgico da anomalia R$ 35,00 (taxa de café da manhã/legado)
+                    if (finalPrice === 35 || Math.abs(finalPrice - 35) < 0.01) {
+                        return null;
+                    }
+
+                    return finalPrice;
                 };
 
-                // Função para obter o preço de uma linha da tabela de disponibilidade,
-                // priorizando o preço bruto (original/tachado) para ignorar os descontos do programa Genius.
-                // Restrita estritamente à célula da coluna de preço ("Preço de hoje") para ignorar condicionais de "Suas escolhas" (ex: Café da manhã R$ 35).
                 const getRowPrice = (row) => {
+                    // Isolamento estrito da célula de preço total da diária (descarta colunas de condições, café da manhã e ocupação)
                     const priceCell = row.querySelector('.hprt-table-cell-price, [data-cell-id*="price"], [data-testid="price-and-discounted-price"], .bui-table__cell--price') ||
-                                      Array.from(row.children).find(td => td.querySelector && (td.querySelector('.bui-price-display__value, .prc-box-format__value, [data-testid="price-and-discounted-price"], del, s')));
+                                      Array.from(row.children).find(td => {
+                                          if (!td || !td.querySelector) return false;
+                                          const cls = (td.className || '').toString().toLowerCase();
+                                          if (cls.includes('conditions') || cls.includes('roomtype') || cls.includes('occupancy') || cls.includes('facility')) return false;
+                                          const text = (td.innerText || td.textContent || '').toLowerCase();
+                                          if (text.includes('café da manhã') || text.includes('breakfast') || text.includes('opcional')) return false;
+                                          return !!td.querySelector('.bui-price-display__value, .prc-box-format__value, [data-testid="price-and-discounted-price"], del, s');
+                                      });
 
-                    const searchContext = priceCell || row;
+                    if (!priceCell) return null;
 
-                    // 1. Procurar por preços originais/brutos (estão riscados/tachados em del ou s) para ignorar tarifas do programa Genius e promoções
-                    const originalSelectors = [
-                        'del',
-                        's',
-                        '.bui-price-display__original',
-                        '[class*="original"]',
-                        '[class*="old"]',
-                        '[class*="strikethrough"]'
+                    const searchContext = priceCell;
+
+                    const activePriceSelectors = [
+                        '.bui-price-display__value',
+                        '.prc-box-format__value',
+                        '[data-testid="price-and-discounted-price"]',
+                        '.prco-valign-middle-helper',
+                        'span.prco-inline-block-maker-helper',
+                        '[data-testid="price-display-value"]',
+                        '.prco-text-nowrap-helper'
                     ];
-                    
-                    let basePrice = null;
-                    let foundEl = null;
-                    
-                    for (const sel of originalSelectors) {
+
+                    let currentDiscountedPrice = null;
+                    for (const sel of activePriceSelectors) {
                         const els = searchContext.querySelectorAll(sel);
                         for (const el of els) {
+                            let parent = el;
+                            let isStrikethrough = false;
+                            while (parent && parent !== searchContext) {
+                                if (parent.tagName === 'DEL' || parent.tagName === 'S' ||
+                                    (parent.className && typeof parent.className === 'string' && 
+                                     (parent.className.includes('strikethrough') || parent.className.includes('original') || parent.className.includes('old')))) {
+                                    isStrikethrough = true;
+                                    break;
+                                }
+                                parent = parent.parentElement;
+                            }
+                            if (isStrikethrough) continue;
+
                             const txt = (el.innerText || el.textContent || '').trim();
                             const price = parsePriceText(txt);
-                            if (price !== null && !isNaN(price) && price >= 100) {
-                                basePrice = price;
-                                foundEl = el;
+                            if (price !== null && !isNaN(price)) {
+                                currentDiscountedPrice = price;
                                 break;
                             }
                         }
-                        if (basePrice !== null) break;
+                        if (currentDiscountedPrice !== null) break;
                     }
-                    
-                    // 2. Se não houver preço original/bruto tachado, usar seletores de preço comum (sem desconto)
-                    if (basePrice === null) {
-                        const normalSelectors = [
-                            '.bui-price-display__value',
-                            '.prc-box-format__value',
-                            '[data-testid="price-and-discounted-price"]',
-                            '.prco-valign-middle-helper',
-                            'span.prco-inline-block-maker-helper',
-                            '[data-testid="price-display-value"]',
-                            '.prco-text-nowrap-helper'
-                        ];
-                        for (const sel of normalSelectors) {
-                            const els = searchContext.querySelectorAll(sel);
-                            for (const el of els) {
-                                // Ignorar se o elemento estiver dentro de del ou s
-                                let parent = el.parentElement;
-                                let inStrikethrough = false;
-                                while (parent && parent !== searchContext) {
-                                    if (parent.tagName === 'DEL' || parent.tagName === 'S') {
-                                        inStrikethrough = true;
-                                        break;
-                                    }
-                                    parent = parent.parentElement;
-                                }
-                                if (inStrikethrough) continue;
-                                
-                                const txt = (el.innerText || el.textContent || '').trim();
-                                const price = parsePriceText(txt);
-                                if (price !== null && !isNaN(price) && price >= 100) {
-                                    basePrice = price;
-                                    foundEl = el;
-                                    break;
-                                }
+
+                    if (currentDiscountedPrice !== null) return currentDiscountedPrice;
+
+                    const allEls = searchContext.querySelectorAll('*');
+                    for (const el of allEls) {
+                        let parent = el;
+                        let isStrikethrough = false;
+                        while (parent && parent !== searchContext) {
+                            if (parent.tagName === 'DEL' || parent.tagName === 'S' ||
+                                (parent.className && typeof parent.className === 'string' && 
+                                 (parent.className.includes('strikethrough') || parent.className.includes('original') || parent.className.includes('old')))) {
+                                isStrikethrough = true;
+                                break;
                             }
-                            if (basePrice !== null) break;
+                            parent = parent.parentElement;
+                        }
+                        if (isStrikethrough) continue;
+
+                        const txt = (el.innerText || el.textContent || '').trim();
+                        const price = parsePriceText(txt);
+                        if (price !== null && !isNaN(price)) {
+                            return price;
                         }
                     }
-                    
-                    if (basePrice === null) return null;
-                    
-                    return basePrice;
+
+                    return null;
                 };
 
                 const extractAllRooms = async () => {
@@ -822,15 +901,14 @@ async function run() {
                                   document.querySelector('table[data-block="availability_table"]');
                     if (!table) return [];
 
-                    const roomMap = new Map(); // key -> { name, price, adults, children, images }
+                    const roomMap = new Map();
                     let currentRoomName = null;
                     let currentRoomCell = null;
 
                     const rows = table.querySelectorAll('tr');
-                    let roomNameIdx = 0;   // contador para data-scraper-idx
+                    let roomNameIdx = 0;
                     let currentScraperIdx = -1;
                     for (const row of rows) {
-                        // 1. Detect room name/category in this row (or inherited from rowspan)
                         const roomNameEl = row.querySelector(
                             'a[data-testid="rt-name-link"], .hprt-roomtype-link, [data-testid="room-type-name"], [data-testid="roomtype-name"], .hprt-roomtype-icon-link, .room-name, span.rt-room-title, [data-cell-id*="room_type"] a, a[href*="#rd-"]'
                         );
@@ -839,7 +917,6 @@ async function run() {
                             if (txt) {
                                 currentRoomName = txt;
                                 currentRoomCell = roomNameEl.closest('td') || roomNameEl.closest('th') || roomNameEl.parentElement;
-                                // Marcar o elemento com índice único para clique externo via Puppeteer
                                 if (!roomNameEl.hasAttribute('data-scraper-idx')) {
                                     roomNameEl.setAttribute('data-scraper-idx', String(roomNameIdx++));
                                 }
@@ -849,11 +926,9 @@ async function run() {
 
                         if (!currentRoomName) continue;
 
-                        // 2. Extract occupancy (capacity) for adults and children
-                        let adults = 2; // default fallback
-                        let children = 0; // default fallback
+                        let adults = 2;
+                        let children = 0;
 
-                        // Search for occupancy column/container in row
                         const occupancyEl = row.querySelector(
                             '.hprt-occupancy, [data-testid="occupancy-column"], [data-testid="occupancy-icon-group"], .bui-icon--occupancy, .occupancy-container, [class*="occupancy"], [class*="capacity"], [class*="people"]'
                         );
@@ -896,16 +971,13 @@ async function run() {
                             if (childMatch) children = parseInt(childMatch[1]);
                         }
 
-                        // 3. Extract price for this row
                         const rowPrice = getRowPrice(row);
 
                         if (rowPrice !== null) {
-                            // Regra Estrita: Filtra para aceitar apenas tarifas de exatamente 2 adultos e 0 crianças
                             if (adults !== 2 || children !== 0) {
                                 continue;
                             }
 
-                            // Verificar imagens inline no TD do quarto (fast-path)
                             let inlineImages = [];
                             if (currentRoomCell) {
                                 inlineImages = Array.from(currentRoomCell.querySelectorAll('img')).map(img => {
@@ -921,8 +993,6 @@ async function run() {
                         }
                     }
 
-                    // Se houver dupla oferta (1 adulto e 2 adultos) para o mesmo nome de quarto,
-                    // prioriza unicamente a opção de 2 adultos (e remove a de 1 adulto)
                     for (const key of Array.from(roomMap.keys())) {
                         if (key.endsWith('_1_0')) {
                             const roomBaseName = key.slice(0, -4);
@@ -933,13 +1003,11 @@ async function run() {
                         }
                     }
 
-                    // Retornar lista de quartos ordenada por preço
                     return Array.from(roomMap.values()).sort((a, b) => a.price - b.price);
                 };
 
                 const rooms = await extractAllRooms();
 
-                // Extração do menor preço da tabela (fallback) usando a lógica unificada do getRowPrice
                 let lowestTablePrice = null;
                 const table = document.querySelector('.hprt-table') ||
                               document.querySelector('[data-testid="availability-table"]') ||
@@ -956,12 +1024,10 @@ async function run() {
                     }
                 }
 
-                // Se encontrou quartos com preço → definitivamente disponível.
                 if (rooms.length > 0) {
                     return { rooms, lowestTablePrice, isSoldOut: false };
                 }
 
-                // Nenhum quarto extraído → verificar se é realmente esgotado
                 const bodyText = document.body.innerText || document.body.textContent || '';
                 const hasTable = !!table;
                 const isSoldOut = !hasTable ||
@@ -978,99 +1044,30 @@ async function run() {
             });
 
             const { rooms, lowestTablePrice, isSoldOut } = data;
-
-            // ── Extração de imagens via Puppeteer nativo (usa data-scraper-idx injetado no DOM) ──
-            const roomsNeedingImages = rooms.filter(r => !r.images || r.images.length === 0);
-            const seenScraperIdx = new Set();
-            for (const room of roomsNeedingImages) {
-                if (room.scraperIdx < 0 || seenScraperIdx.has(room.scraperIdx)) continue;
-                seenScraperIdx.add(room.scraperIdx);
-
-                try {
-                    const triggerHandle = await page.$(`[data-scraper-idx="${room.scraperIdx}"]`);
-                    if (!triggerHandle) continue;
-
-                    await page.evaluate(el => {
-                        document.documentElement.style.scrollBehavior = 'auto';
-                        document.body.style.scrollBehavior = 'auto';
-                        el.scrollIntoView({ block: 'center', behavior: 'instant' });
-                    }, triggerHandle);
-                    await new Promise(r => setTimeout(r, 1500));
-                    
-                    // Clique nativo do Puppeteer (essencial para que o Booking aceite o evento como trusted)
-                    await triggerHandle.click();
-                    await triggerHandle.dispose();
-
-                    // Aguardar modal com imagens (máx 5s) usando estratégia de z-index dinâmico
-                    let modalImages = [];
-                    let modalFound = false;
-                    for (let w = 0; w < 50; w++) {
-                        modalImages = await page.evaluate(() => {
-                            const allElements = Array.from(document.querySelectorAll('body *'));
-                            const modals = allElements.filter(el => {
-                                if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE'].includes(el.tagName)) return false;
-                                const style = window.getComputedStyle(el);
-                                const isPositioned = ['fixed', 'absolute'].includes(style.position);
-                                const zIndex = parseInt(style.zIndex, 10);
-                                return isPositioned && zIndex >= 100 && el.offsetHeight > 200 && el.offsetWidth > 200;
-                            });
-                            
-                            if (modals.length === 0) return [];
-                            
-                            for (const modal of modals) {
-                                const imgs = Array.from(modal.querySelectorAll('img')).map(img => {
-                                    return img.getAttribute('src') || img.getAttribute('data-lazy') ||
-                                           img.getAttribute('data-highres') || img.srcset || '';
-                                }).filter(src => src.includes('bstatic.com'))
-                                  .map(src => {
-                                      return src.split(',')[0].trim().split(' ')[0]
-                                          .replace('/square60/', '/max1024x768/')
-                                          .replace('/max500/', '/max1024x768/');
-                                  }).filter(src => src.startsWith('http'));
-                                
-                                if (imgs.length > 0) {
-                                    return Array.from(new Set(imgs));
-                                }
-                            }
-                            return [];
-                        });
-                        
-                        if (modalImages.length > 0) {
-                            modalFound = true;
-                            break;
-                        }
-                        await new Promise(r => setTimeout(r, 100));
-                    }
- 
-                    if (modalFound && modalImages.length > 0) {
-                        room.images = modalImages;
-                        console.log(`   🖼️  ${room.name}: ${modalImages.length} foto(s) extraída(s)`);
-                        
-                        // Fechar modal usando a tecla Escape do Puppeteer (super confiável)
-                        await page.keyboard.press('Escape');
-                        await new Promise(r => setTimeout(r, 800));
-                    } else {
-                        console.log(`   ⚠️  ${room.name}: modal não encontrado após 5s`);
-                    }
-                } catch (_) { /* imagem não crítica */ }
-            }
-            // ───────────────────────────────────────────────────────────────────────
+            const propUpdates = [];
+            const nightsCount = Math.max(1, Math.round((new Date(checkoutDate) - new Date(checkinDate)) / (1000 * 60 * 60 * 24))) || 2;
 
             if (rooms.length === 0 && lowestTablePrice > 0) {
-                console.log(`   📋 Nenhum quarto estruturado, mas detectado menor preço da tabela: R$ ${lowestTablePrice}`);
-                allUpdates.push({
+                const nightlyLowestPrice = Math.round((lowestTablePrice / nightsCount) * 100) / 100;
+                console.log(`   📋 Nenhum quarto estruturado, menor diária da tabela: R$ ${nightlyLowestPrice}`);
+                propUpdates.push({
                     property_id: prop.id,
                     property_name: prop.name,
                     room_name: 'Preço Base (Tabela)',
-                    price: lowestTablePrice,
+                    price: nightlyLowestPrice,
                     adults: 2,
                     children: 0,
                     source_url: currentUrl,
                     status: 'available',
                 });
-            } else if (isSoldOut || rooms.length === 0) {
-                console.log(`   🚫 Indisponível ou sem quartos na tabela de disponibilidade`);
-                allUpdates.push({
+            } else if (rooms.length === 0) {
+                if (attempt < MAX_RETRIES) {
+                    console.log(`   ⚠️ [${prop.name}] Tabela vazia para a data de hoje. Re-tentando mesma data (tentativa ${attempt + 1})...`);
+                    await page.close();
+                    continue;
+                }
+                console.log(`   🚫 Indisponível ou esgotado para a data de hoje (após ${MAX_RETRIES} tentativas)`);
+                propUpdates.push({
                     property_id: prop.id,
                     property_name: prop.name,
                     room_name: 'Indisponível (Esgotado)',
@@ -1079,14 +1076,15 @@ async function run() {
                     status: 'sold_out',
                 });
             } else {
-                console.log(`   📋 ${rooms.length} tipo(s) de quarto encontrado(s):`);
+                console.log(`   📋 ${rooms.length} tipo(s) de quarto encontrado(s) (${nightsCount} noites):`);
                 for (const room of rooms) {
-                    console.log(`      💵 ${room.name} (${room.adults} adultos, ${room.children} crianças): R$ ${room.price.toFixed(2)}`);
-                    allUpdates.push({
+                    const nightlyPrice = Math.round((room.price / nightsCount) * 100) / 100;
+                    console.log(`      💵 ${room.name} (${room.adults} adultos, ${room.children} crianças): R$ ${nightlyPrice.toFixed(2)} /noite`);
+                    propUpdates.push({
                         property_id: prop.id,
                         property_name: prop.name,
                         room_name: room.name,
-                        price: room.price,
+                        price: nightlyPrice,
                         adults: room.adults,
                         children: room.children,
                         source_url: currentUrl,
@@ -1096,25 +1094,121 @@ async function run() {
                 }
             }
 
-        } catch (error) {
-            console.error(`   ❌ Erro ao processar ${prop.name}:`, error.stack || error);
+            await page.close();
+            const finalStatus = (rooms.length === 0) ? 'SOLD_OUT' : 'SUCCESS';
+            return { status: finalStatus, updates: propUpdates, prop };
+
+        } catch (err) {
+            if (page) await page.close().catch(() => {});
+            console.warn(`   ⚠️ [${prop.name}] Erro na tentativa ${attempt}: ${err.message}`);
+            if (attempt < MAX_RETRIES) {
+                await sleep(1500);
+            }
+        }
+    }
+
+    console.error(`   ❌ [${prop.name}] Falha após ${MAX_RETRIES} tentativas.`);
+    return { status: 'TIMEOUT', updates: [], prop };
+}
+
+async function run() {
+    const startTime = Date.now();
+    const today = new Date();
+    const checkin = new Date(today);
+    const checkout = new Date(checkin);
+    checkout.setDate(checkout.getDate() + 2); // Amplia a janela de busca para 2 diárias
+    
+    const checkinDate = formatDate(checkin);
+    const checkoutDate = formatDate(checkout);
+
+    console.log('\n══════════════════════════════════════════════════════════');
+    console.log('   🤖 ROBÔ BOOKING-SCRAPER → LOVABLE (Janela de 2 Diárias)');
+    console.log(`   📅 Check-in: ${checkinDate} | Check-out: ${checkoutDate} (2 noites)`);
+    console.log(`   ⏰ ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
+    console.log('══════════════════════════════════════════════════════════\n');
+
+    let properties = await fetchProperties();
+
+    // Sanitização e limpeza automática de URLs com parâmetros antigos/expirados no Supabase
+    const autoSanitizePropertyUrls = async (props) => {
+        if (!supabaseAdmin) return;
+        let count = 0;
+        for (const prop of props) {
+            if (!prop.source_url) continue;
+            try {
+                const rawObj = new URL(prop.source_url.trim());
+                if (rawObj.search || rawObj.hash) {
+                    const cleanCanonical = rawObj.origin + rawObj.pathname;
+                    await supabaseAdmin.from('properties').update({ source_url: cleanCanonical }).eq('id', prop.id);
+                    prop.source_url = cleanCanonical;
+                    count++;
+                }
+            } catch (_) {}
+        }
+        if (count > 0) {
+            console.log(`   🧹 [Auto-Sanitizador] ${count} URL(s) sanitizada(s) e limpa(s) no Supabase.`);
+        }
+    };
+
+    await autoSanitizePropertyUrls(properties);
+
+    const propFilterIdx = process.argv.indexOf('--property');
+    if (propFilterIdx !== -1 && process.argv[propFilterIdx + 1]) {
+        const filterVal = process.argv[propFilterIdx + 1].toLowerCase();
+        properties = properties.filter(p => p.name.toLowerCase().includes(filterVal));
+        console.log(`   🔍 Filtrando propriedades por: "${process.argv[propFilterIdx + 1]}" (restante: ${properties.length})`);
+    }
+
+    if (properties.length === 0) {
+        console.log('⚠️  Nenhuma propriedade correspondente encontrada.');
+        return;
+    }
+
+    console.log('🌐 Iniciando navegador Puppeteer (modo stealth otimizado)...');
+    const browser = await puppeteer.launch({
+        headless: 'new',
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-blink-features=AutomationControlled',
+            '--disable-web-security',
+            '--disable-features=IsolateOrigins,site-per-process',
+        ],
+    });
+
+    const allUpdates = [];
+    const checkedPropIds = [];
+    const healthReport = [];
+
+    // Processamento sequencial confiável (evita bloqueios de taxa de requisições paralelas na Booking)
+    const CONCURRENCY = 1;
+    console.log(`🚀 Processando ${properties.length} propriedades em sequência estável...\n`);
+
+    for (let i = 0; i < properties.length; i += CONCURRENCY) {
+        const chunk = properties.slice(i, i + CONCURRENCY);
+        const batchResults = await Promise.all(
+            chunk.map((prop, idx) => scrapePropertyWithRetry(browser, prop, i + idx, properties.length, checkinDate, checkoutDate))
+        );
+
+        for (const res of batchResults) {
+            checkedPropIds.push(res.prop.id);
+            healthReport.push({
+                name: res.prop.name,
+                status: res.status,
+                updatesCount: res.updates.length
+            });
+            allUpdates.push(...res.updates);
         }
 
-        await page.close();
-
-        // Pausa entre propriedades (3-6 segundos)
-        if (i < properties.length - 1) {
-            const pause = 3000 + Math.floor(Math.random() * 3000);
-            console.log(`   ⏳ Aguardando ${Math.round(pause / 1000)}s...`);
+        if (i + CONCURRENCY < properties.length) {
+            const pause = 2000 + Math.floor(Math.random() * 1500);
             await sleep(pause);
         }
     }
 
     await browser.close();
 
-    // Saneamento e validação estrita de segurança para o campo "price"
     const validUpdates = allUpdates.filter(update => {
-        // Regra 7: Não envie price negativo, null, NaN ou string.
         if (update.price === null || update.price === undefined || isNaN(update.price)) {
             console.warn(`⚠️  Removendo atualização com preço inválido (null/NaN):`, update.property_name);
             return false;
@@ -1128,29 +1222,37 @@ async function run() {
             return false;
         }
 
-        // Regra de Integridade: Preços de diárias em Ouro Preto não são inferiores a R$ 100 (evita artefatos de desconto como 35%).
-        if (update.price > 0 && update.price < 100) {
-            console.warn(`⚠️  Removendo atualização com preço anômalo/inferior a R$ 100 (R$ ${update.price}):`, update.property_name, update.room_name);
+        if (update.price === 35 || Math.abs(update.price - 35) < 0.01) {
+            console.warn(`⚠️  Removendo atualização com valor anômalo de café da manhã (R$ 35,00):`, update.property_name, update.room_name);
             return false;
         }
         
-        // Regra 6: Se o quarto estiver esgotado/indisponível: envie price: 0 e status: "sold_out".
         if (update.status === 'sold_out') {
             update.price = 0;
         }
         
-        // Regra 5: Máximo 2 casas decimais. Arredonde valores fracionados.
         update.price = Math.round(update.price * 100) / 100;
-        
         return true;
     });
 
-    // 3) Gravar preços (direto ou via Edge Function conforme .env)
-    await saveUpdates(validUpdates);
+    // Gravar preços e forçar atualização do timestamp updated_at no Supabase para TODAS as propriedades checadas
+    await saveUpdates(validUpdates, checkedPropIds);
+
+    const elapsedMs = Date.now() - startTime;
+    const elapsedMinutes = Math.floor(elapsedMs / 60000);
+    const elapsedSeconds = Math.round((elapsedMs % 60000) / 1000);
+
+    const successCount = healthReport.filter(h => h.status === 'SUCCESS').length;
+    const soldOutCount = healthReport.filter(h => h.status === 'SOLD_OUT').length;
+    const timeoutCount = healthReport.filter(h => h.status === 'TIMEOUT' || h.status === 'INVALID_URL').length;
 
     console.log('\n══════════════════════════════════════════════════════════');
-    console.log(`   ✅ Scraping finalizado!`);
-    console.log(`   📊 ${properties.length} propriedades processadas, ${allUpdates.length} entradas de quarto enviadas`);
+    console.log(`   ✅ SCRAPING FINALIZADO EM ${elapsedMinutes}min ${elapsedSeconds}s!`);
+    console.log(`   📊 Propriedades Verificadas: ${properties.length}`);
+    console.log(`      🟢 Sucesso com Preços: ${successCount}`);
+    console.log(`      🚫 Esgotadas/Indisponíveis: ${soldOutCount}`);
+    console.log(`      ⚠️  Falhas/Timeout: ${timeoutCount}`);
+    console.log(`   📦 Entradas de quarto enviadas ao Supabase: ${validUpdates.length}`);
     console.log(`   ⏰ ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
     console.log('══════════════════════════════════════════════════════════\n');
 }
@@ -1173,9 +1275,9 @@ async function startLoop() {
     }
 }
 
-// --once para teste, sem flag para loop contínuo
 if (process.argv.includes('--once')) {
     run().catch(console.error);
 } else {
     startLoop();
 }
+
