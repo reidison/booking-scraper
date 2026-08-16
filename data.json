@@ -440,18 +440,6 @@
             ]
         },
         {
-            "id": "pousada-chico-anjo-5821",
-            "property_name": "Pousada Chico Anjo",
-            "booking_link": "https://www.booking.com/hotel/br/pousada-chico-anjo.pt-br.html?aid=304142",
-            "main_photo_url": "https://rzvunamxwgvxoakznpux.supabase.co/storage/v1/object/public/property-images/36c1b0e3-f9c4-4818-8557-a0fc18491962.jpg",
-            "room_types": [
-                {
-                    "type": "Aguardando atualização",
-                    "price": "--"
-                }
-            ]
-        },
-        {
             "id": "chal-vila-catarina-5265",
             "property_name": "Chalé Vila Catarina",
             "booking_link": "https://www.booking.com/hotel/br/pousada-vila-catarina-ouro-preto2.pt-br.html?aid=304142",
