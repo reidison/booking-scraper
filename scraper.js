@@ -546,7 +546,15 @@ async function updateSupabaseDirectly(updates, checkedPropIds = []) {
             }
         }
 
-        // Mantém quartos já cadastrados sem excluí-los em oscilações temporárias de raspagem
+        // 3) Zerar preço de quartos antigos não atualizados na rodada atual ou com valores anômalos (< R$ 100)
+        for (const r of propRooms) {
+            if (!updatedRoomIds.has(r.id) || r.price < 100) {
+                if (r.price > 0) {
+                    await supabaseAdmin.from('rooms').update({ price: 0 }).eq('id', r.id);
+                    console.log(`   🧹 ${prop.name} / ${r.name}: preço antigo de R$ ${r.price} limpo (atualizado para R$ 0)`);
+                }
+            }
+        }
 
         // Atualiza preço base da propriedade com o menor preço ativo da rodada (filtrando anomalias < R$ 100), URL, timestamp de verificação (updated_at) e o Score Ouro Preto autoral
         const validRoomPrices = activeRoomPrices.filter(p => p >= 100);
