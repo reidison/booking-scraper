@@ -811,12 +811,12 @@ async function scrapePropertyWithRetry(browser, prop, index, totalProps, checkin
                         priceVal = parseFloat(filtered);
                     }
                     
-                    if (isNaN(priceVal) || priceVal <= 0) return null;
+                    if (isNaN(priceVal) || priceVal < 100) return null;
 
                     const finalPrice = Math.round(priceVal * 100) / 100;
 
-                    // Bloqueio definitivo e cirúrgico da anomalia R$ 35,00 (taxa de café da manhã/legado)
-                    if (finalPrice === 35 || Math.abs(finalPrice - 35) < 0.01) {
+                    // Bloqueio definitivo de taxas adicionais (ex: café da manhã R$ 35,00)
+                    if (finalPrice < 100) {
                         return null;
                     }
 
@@ -824,18 +824,20 @@ async function scrapePropertyWithRetry(browser, prop, index, totalProps, checkin
                 };
 
                 const getRowPrice = (row) => {
-                    // Isolamento estrito da célula de preço total da diária (descarta colunas de condições, café da manhã e ocupação)
-                    const priceCell = row.querySelector('.hprt-table-cell-price, [data-cell-id*="price"], [data-testid="price-and-discounted-price"], .bui-table__cell--price') ||
+                    // Isolamento estrito da COLUNA 2 (Preço de hoje: .hprt-table-cell-price)
+                    // Descarta 100% a Coluna 3 de condições (.hprt-table-cell-conditions) onde fica o "Café da manhã R$ 35"
+                    const priceCell = row.querySelector('.hprt-table-cell-price, [data-cell-id*="price"]') ||
                                       Array.from(row.children).find(td => {
-                                          if (!td || !td.querySelector) return false;
-                                          const cls = (td.className || '').toString().toLowerCase();
-                                          if (cls.includes('conditions') || cls.includes('roomtype') || cls.includes('occupancy') || cls.includes('facility')) return false;
-                                          const text = (td.innerText || td.textContent || '').toLowerCase();
-                                          if (text.includes('café da manhã') || text.includes('breakfast') || text.includes('opcional')) return false;
-                                          return !!td.querySelector('.bui-price-display__value, .prc-box-format__value, [data-testid="price-and-discounted-price"], del, s');
+                                          if (!td || !td.className) return false;
+                                          const cls = td.className.toString().toLowerCase();
+                                          return cls.includes('hprt-table-cell-price') || (cls.includes('price') && !cls.includes('conditions') && !cls.includes('roomtype') && !cls.includes('select'));
                                       });
 
                     if (!priceCell) return null;
+
+                    // Rejeita explicitamente se a célula capturada for de condições/serviços adicionais
+                    const cellClass = (priceCell.className || '').toString().toLowerCase();
+                    if (cellClass.includes('conditions')) return null;
 
                     const searchContext = priceCell;
 
@@ -849,7 +851,6 @@ async function scrapePropertyWithRetry(browser, prop, index, totalProps, checkin
                         '.prco-text-nowrap-helper'
                     ];
 
-                    let currentDiscountedPrice = null;
                     for (const sel of activePriceSelectors) {
                         const els = searchContext.querySelectorAll(sel);
                         for (const el of els) {
@@ -868,36 +869,17 @@ async function scrapePropertyWithRetry(browser, prop, index, totalProps, checkin
 
                             const txt = (el.innerText || el.textContent || '').trim();
                             const price = parsePriceText(txt);
-                            if (price !== null && !isNaN(price)) {
-                                currentDiscountedPrice = price;
-                                break;
+                            if (price !== null && !isNaN(price) && price >= 100) {
+                                return price;
                             }
                         }
-                        if (currentDiscountedPrice !== null) break;
                     }
 
-                    if (currentDiscountedPrice !== null) return currentDiscountedPrice;
-
-                    const allEls = searchContext.querySelectorAll('*');
-                    for (const el of allEls) {
-                        let parent = el;
-                        let isStrikethrough = false;
-                        while (parent && parent !== searchContext) {
-                            if (parent.tagName === 'DEL' || parent.tagName === 'S' ||
-                                (parent.className && typeof parent.className === 'string' && 
-                                 (parent.className.includes('strikethrough') || parent.className.includes('original') || parent.className.includes('old')))) {
-                                isStrikethrough = true;
-                                break;
-                            }
-                            parent = parent.parentElement;
-                        }
-                        if (isStrikethrough) continue;
-
-                        const txt = (el.innerText || el.textContent || '').trim();
-                        const price = parsePriceText(txt);
-                        if (price !== null && !isNaN(price)) {
-                            return price;
-                        }
+                    // Se os seletores internos não retornarem, extrai do texto direto da célula de preço
+                    const rawCellText = (searchContext.innerText || searchContext.textContent || '').trim();
+                    const directPrice = parsePriceText(rawCellText);
+                    if (directPrice !== null && !isNaN(directPrice) && directPrice >= 100) {
+                        return directPrice;
                     }
 
                     return null;
