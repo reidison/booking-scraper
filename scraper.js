@@ -920,7 +920,7 @@ async function scrapePropertyWithRetry(browser, prop, index, totalProps, checkin
                         let children = 0;
 
                         const occupancyEl = row.querySelector(
-                            '.hprt-occupancy, [data-testid="occupancy-column"], [data-testid="occupancy-icon-group"], .bui-icon--occupancy, .occupancy-container, [class*="occupancy"], [class*="capacity"], [class*="people"]'
+                            '.hprt-table-cell-occupancy, [data-cell-id*="occupancy"], .hprt-occupancy, [data-testid="occupancy-column"], [data-testid="occupancy-icon-group"], .bui-icon--occupancy, .occupancy-container, [class*="occupancy"], [class*="capacity"], [class*="people"]'
                         );
 
                         if (occupancyEl) {
